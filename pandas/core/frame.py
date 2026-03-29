@@ -15685,7 +15685,10 @@ class DataFrame(NDFrame, OpsMixin):
         elif len(self) == 0 and out.dtype == object and name in ("sum", "prod"):
             # Even if we are object dtype, follow numpy and return
             #  float64, see test_apply_funcs_over_empty
-            out = out.astype(np.float64)
+            # GH#64657: skip the float64 cast when string-dtype columns are
+            # present, as their sum result ("") cannot be cast to float64.
+            if not any(isinstance(t, StringDtype) for t in df.dtypes):
+                out = out.astype(np.float64)
 
         return out
 

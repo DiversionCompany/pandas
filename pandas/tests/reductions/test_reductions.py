@@ -1283,6 +1283,18 @@ class TestSeriesReductions:
             assert isinstance(result, np.uint64)
 
 
+def test_sum_empty_dataframe_mixed_string_numeric():
+    # GH#64657 - DataFrame.sum() on empty DataFrame with string + numeric columns
+    # should not crash
+    df = DataFrame({"col1": ["x", "y", "z"], "col2": [1, 2, 3]})
+    empty_df = df[df["col2"] > 100]  # empty DataFrame
+
+    result = empty_df.sum()
+    # Numeric column should be 0, string column should be empty string
+    assert result["col2"] == 0
+    assert result["col1"] == ""
+
+
 class TestDatetime64SeriesReductions:
     # Note: the name TestDatetime64SeriesReductions indicates these tests
     #  were moved from a series-specific test file, _not_ that these tests are

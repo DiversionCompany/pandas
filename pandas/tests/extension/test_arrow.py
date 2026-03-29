@@ -1785,6 +1785,16 @@ def test_str_contains_re2_unicode_escape():
     tm.assert_series_equal(result, expected)
 
 
+def test_str_contains_python_unicode_escape():
+    # GH 63901 - Python-style \uXXXX escapes should work with pyarrow backend
+    # Python's re module handles \uXXXX escapes but RE2 (used by pyarrow) does not;
+    # pandas should convert them to RE2's \x{XXXX} format automatically
+    ser = pd.Series(["a", "\u0e01", None], dtype=ArrowDtype(pa.string()))
+    result = ser.str.contains(r"[\u0e00-\u0e7f]")
+    expected = pd.Series([False, True, None], dtype=ArrowDtype(pa.bool_()))
+    tm.assert_series_equal(result, expected)
+
+
 @pytest.mark.parametrize(
     "side, pat, na, exp",
     [

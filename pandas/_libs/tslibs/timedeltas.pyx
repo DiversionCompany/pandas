@@ -2346,6 +2346,14 @@ class Timedelta(_Timedelta):
 
         unit = get_unit_for_round(freq, self._creso)
 
+        if unit == 0:
+            # The target frequency is finer than the Timedelta's internal
+            # resolution (e.g., rounding a seconds-resolution Timedelta to
+            # milliseconds). The value is already a whole multiple of the
+            # target frequency, so no rounding is needed.
+            # GH#64828
+            return Timedelta._from_value_and_reso(self._value, self._creso)
+
         arr = np.array([self._value], dtype="i8")
         try:
             result = round_nsint64(arr, mode, unit)[0]

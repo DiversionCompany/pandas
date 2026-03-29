@@ -185,3 +185,29 @@ class TestTimedeltaRound:
         res = td.ceil("min")
         assert res == Timedelta("1 days 02:35:00")
         assert res._creso == td._creso
+
+    def test_round_sub_second_with_seconds_unit(self):
+        # GH#64828 - rounding a seconds-resolution Timedelta to sub-second
+        # frequency should not raise ZeroDivisionError
+        td = Timedelta(1, unit="s").as_unit("s")
+
+        # Rounding to a finer resolution than the internal unit should
+        # return the same value unchanged
+        for freq in ["ms", "us", "ns"]:
+            res = td.round(freq)
+            assert res == td
+            assert res._creso == td._creso
+
+            res = td.floor(freq)
+            assert res == td
+            assert res._creso == td._creso
+
+            res = td.ceil(freq)
+            assert res == td
+            assert res._creso == td._creso
+
+        # Also test the original issue's example
+        td_days = Timedelta(1.0, unit="days").as_unit("s")
+        res = td_days.round("ms")
+        assert res == td_days
+        assert res._creso == td_days._creso

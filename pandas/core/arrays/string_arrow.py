@@ -389,6 +389,40 @@ class ArrowStringArray(ObjectStringArrayMixin, ArrowExtensionArray, BaseStringAr
         )
 
     @staticmethod
+    def _convert_unicode_escapes_to_re2(pattern: str) -> str:
+        """
+        Convert Python-style Unicode escape sequences to RE2 format.
+
+        Python's re module understands \\uXXXX and \\UXXXXXXXX escape sequences,
+        but RE2 (used by pyarrow) does not. RE2 uses \\x{XXXX} format instead.
+        This function converts any \\uXXXX or \\UXXXXXXXX sequences in the pattern
+        to the equivalent \\x{XXXX} format that RE2 accepts.
+
+        Parameters
+        ----------
+        pattern : str
+            Regex pattern potentially containing Python-style Unicode escapes.
+
+        Returns
+        -------
+        str
+            Pattern with Unicode escapes converted to RE2 format.
+        """
+        # Convert \uXXXX (4 hex digits) to \x{XXXX}
+        pattern = re.sub(
+            r"\\u([0-9a-fA-F]{4})",
+            lambda m: r"\x{" + m.group(1) + "}",
+            pattern,
+        )
+        # Convert \UXXXXXXXX (8 hex digits) to \x{XXXXXXXX}
+        pattern = re.sub(
+            r"\\U([0-9a-fA-F]{8})",
+            lambda m: r"\x{" + m.group(1) + "}",
+            pattern,
+        )
+        return pattern
+
+    @staticmethod
     def _preprocess_re_pattern(
         pat: str | re.Pattern, case: bool, flags: int
     ) -> tuple[str, bool, int]:
@@ -405,6 +439,11 @@ class ArrowStringArray(ObjectStringArrayMixin, ArrowExtensionArray, BaseStringAr
             flags = flags & ~re.UNICODE
         else:
             pattern = pat
+
+        # Convert Python-style Unicode escape sequences (\uXXXX, \UXXXXXXXX) to
+        # RE2 format (\x{XXXX}), since pyarrow uses RE2 which does not support
+        # the Python-style Unicode escapes. GH#63901
+        pattern = ArrowStringArray._convert_unicode_escapes_to_re2(pattern)
 
         if (
             pattern.endswith("\\Z")

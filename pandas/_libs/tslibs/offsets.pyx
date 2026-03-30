@@ -7147,6 +7147,16 @@ INVALID_FREQ_ERR_MSG = "Invalid frequency: {0}"
 # cache of previously seen offsets
 _offset_map = {}
 
+# Precomputed set of valid (non-deprecated) freq string values in
+# c_PERIOD_AND_OFFSET_DEPR_FREQSTR for O(1) membership testing.
+# Without this, checking ``_name in c_PERIOD_AND_OFFSET_DEPR_FREQSTR.values()``
+# inside ``_warn_about_deprecated_aliases`` would be an O(n) linear scan of
+# the dict's values view, causing a performance regression in any hot path that
+# calls ``to_offset`` (GH#58962).
+_PERIOD_AND_OFFSET_DEPR_FREQSTR_VALUES: frozenset = frozenset(
+    c_PERIOD_AND_OFFSET_DEPR_FREQSTR.values()
+)
+
 
 deprec_to_valid_alias = {
     "H": "h",
@@ -7215,7 +7225,7 @@ def _warn_about_deprecated_aliases(name: str, is_period: bool) -> str:
     for _name in (name.lower(), name.upper()):
         if name == _name:
             continue
-        if _name in c_PERIOD_AND_OFFSET_DEPR_FREQSTR.values():
+        if _name in _PERIOD_AND_OFFSET_DEPR_FREQSTR_VALUES:
             from pandas.errors import Pandas4Warning
 
             # https://github.com/pandas-dev/pandas/pull/59240
@@ -7234,15 +7244,16 @@ def _warn_about_deprecated_aliases(name: str, is_period: bool) -> str:
 
 def _validate_to_offset_alias(alias: str, is_period: bool) -> None:
     if not is_period:
-        if alias.upper() in c_OFFSET_RENAMED_FREQSTR:
+        alias_upper = alias.upper()
+        if alias_upper in c_OFFSET_RENAMED_FREQSTR:
             raise ValueError(
                 f"\'{alias}\' is no longer supported for offsets. Please "
-                f"use \'{c_OFFSET_RENAMED_FREQSTR.get(alias.upper())}\' "
+                f"use \'{c_OFFSET_RENAMED_FREQSTR.get(alias_upper)}\' "
                 f"instead."
             )
-        if (alias.upper() != alias and
+        if (alias_upper != alias and
                 alias.lower() not in {"s", "ms", "us", "ns"} and
-                alias.upper().split("-")[0].endswith(("S", "E"))):
+                alias_upper.split("-")[0].endswith(("S", "E"))):
             raise ValueError(raise_invalid_freq(freq=alias))
     if (
         is_period and

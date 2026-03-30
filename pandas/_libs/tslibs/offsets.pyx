@@ -1411,9 +1411,11 @@ cdef class Tick(SingleConstructorOffset):
         return self.__mul__(other)
 
     def __truediv__(self, other):
-        if not isinstance(self, Tick):
-            # cython semantics mean the args are sometimes swapped
-            result = other._as_pd_timedelta.__rtruediv__(self)
+        if is_integer_object(other) or is_float_object(other):
+            # GH#57264: Use nanosecond resolution to preserve precision when
+            # dividing by a scalar. E.g. Second(10) / 3 should return
+            # Nano(3_333_333_333), not Second(3).
+            result = self._as_pd_timedelta.as_unit("ns").__truediv__(other)
         else:
             result = self._as_pd_timedelta.__truediv__(other)
         return _wrap_timedelta_result(result)

@@ -2023,6 +2023,34 @@ def test_eval_float_div_numexpr():
     assert result == expected
 
 
+def test_eval_string_containment():
+    # GH#64391: eval with string containment using 'in' and 'not in' operators
+    df = DataFrame({"col": ["hello", "world", "foo"]})
+
+    # 'x' in col should perform substring containment, like Python's 'in' for strings
+    result = df.eval("'ello' in col")
+    expected = df["col"].str.contains("ello", regex=False)
+    tm.assert_series_equal(result, expected)
+
+    # 'x' not in col should negate substring containment
+    result_not_in = df.eval("'ello' not in col")
+    tm.assert_series_equal(result_not_in, ~expected)
+
+    # Also verify col.str.contains() works correctly in eval
+    result_str_contains = df.eval("col.str.contains('ello')")
+    tm.assert_series_equal(result_str_contains, expected, check_names=False)
+
+    # Substring that doesn't appear in any element
+    result_no_match = df.eval("'xyz' in col")
+    expected_no_match = df["col"].str.contains("xyz", regex=False)
+    tm.assert_series_equal(result_no_match, expected_no_match)
+
+    # Substring that appears in all elements
+    result_all_match = df.eval("'o' in col")
+    expected_all_match = df["col"].str.contains("o", regex=False)
+    tm.assert_series_equal(result_all_match, expected_all_match)
+
+
 def test_method_calls_on_binop():
     # GH 61175
     x = Series([1, 2, 3, 5])

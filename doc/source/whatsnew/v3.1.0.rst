@@ -185,7 +185,7 @@ Conversion
 
 Strings
 ^^^^^^^
--
+- Bug in :meth:`DataFrame.eval` and :func:`eval` where ``'substring' in column`` did not perform string substring containment for string-dtype columns, instead performing element membership testing; now matches Python's ``in`` operator semantics for strings (:issue:`64391`)
 -
 
 Interval

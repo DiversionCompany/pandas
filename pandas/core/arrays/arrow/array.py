@@ -1478,10 +1478,24 @@ class ArrowExtensionArray(
         if not len(values):
             return np.zeros(len(self), dtype=bool)
 
-        result = pc.is_in(self._pa_array, value_set=pa.array(values))
-        # pyarrow 2.0.0 returned nulls, so we explicitly specify dtype to convert nulls
-        # to False
-        return np.array(result, dtype=np.bool_)
+        # GH#63304: pd.NA cannot be converted by pa.array, so handle NA values
+        # separately. isna() handles pd.NA, np.nan, None, NaT, etc.
+        from pandas import isna
+
+        null_mask = np.array([isna(v) for v in values], dtype=bool)
+        result = np.zeros(len(self), dtype=bool)
+        if null_mask.any():
+            # If any NA values are in the search set, mark self's NA positions
+            result |= np.asarray(self.isna())
+        non_null_values = np.asarray(values)[~null_mask]
+        if len(non_null_values):
+            pa_result = pc.is_in(
+                self._pa_array, value_set=pa.array(non_null_values)
+            )
+            # pyarrow 2.0.0 returned nulls, so we explicitly specify dtype to
+            # convert nulls to False
+            result |= np.array(pa_result, dtype=np.bool_)
+        return result
 
     def _values_for_factorize(self) -> tuple[np.ndarray, Any]:
         """

@@ -65,6 +65,7 @@ Other changes
 Other bug fixes
 ~~~~~~~~~~~~~~~~
 
+- Fixed regression in :meth:`Index.difference` returning too many values for :class:`PeriodIndex` when the subtracted range covers trailing elements of the original index (:issue:`58971`)
 - Fix memory leak in :meth:`DataFrame.to_json` with datetime columns (:issue:`62204`)
 - Fixed regression in :meth:`DataFrame.from_records` not initializing subclasses properly (:issue:`57008`)
 - The :meth:`DataFrame.iloc` now works correctly with ``copy_on_write`` option when assigning values after subsetting the columns of a homogeneous DataFrame (:issue:`60309`)

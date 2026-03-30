@@ -1825,16 +1825,52 @@ def test_str_starts_ends_with_all_nulls_empty_tuple(side):
     tm.assert_series_equal(result, expected)
 
 
-@pytest.mark.parametrize(
-    "arg_name, arg",
-    [["pat", re.compile("b")], ["repl", str], ["case", False], ["flags", 1]],
-)
-def test_str_replace_unsupported(arg_name, arg):
+def test_str_replace_compiled_regex():
+    # GH#64872 - compiled regex should work with ArrowDtype
     ser = pd.Series(["abc", None], dtype=ArrowDtype(pa.string()))
-    kwargs = {"pat": "b", "repl": "x", "regex": True}
-    kwargs[arg_name] = arg
-    with pytest.raises(NotImplementedError, match="replace is not supported"):
-        ser.str.replace(**kwargs)
+    result = ser.str.replace(re.compile("b"), "x", regex=True)
+    expected = pd.Series(["axc", None], dtype=ArrowDtype(pa.string()))
+    tm.assert_series_equal(result, expected)
+
+
+def test_str_replace_callable_repl():
+    # GH#64872 - callable repl should work with ArrowDtype
+    ser = pd.Series(["abc", None], dtype=ArrowDtype(pa.string()))
+    result = ser.str.replace("b", lambda m: m.group(0).upper(), regex=True)
+    expected = pd.Series(["aBc", None], dtype=ArrowDtype(pa.string()))
+    tm.assert_series_equal(result, expected)
+
+
+def test_str_replace_case_insensitive():
+    # GH#64872 - case=False should work with ArrowDtype
+    ser = pd.Series(["abc", None], dtype=ArrowDtype(pa.string()))
+    result = ser.str.replace("B", "x", case=False, regex=True)
+    expected = pd.Series(["axc", None], dtype=ArrowDtype(pa.string()))
+    tm.assert_series_equal(result, expected)
+
+
+def test_str_replace_flags():
+    # GH#64872 - flags should work with ArrowDtype
+    import re as re_mod
+    ser = pd.Series(["abc", None], dtype=ArrowDtype(pa.string()))
+    result = ser.str.replace("B", "x", flags=re_mod.IGNORECASE, regex=True)
+    expected = pd.Series(["axc", None], dtype=ArrowDtype(pa.string()))
+    tm.assert_series_equal(result, expected)
+
+
+@pytest.mark.parametrize(
+    "pat, expected_data",
+    [
+        (r"a(?=b)", ["aa", "xb", "ba", "bb"]),
+        (r"(?<=a)b", ["aa", "ax", "ba", "bb"]),
+    ],
+)
+def test_str_replace_lookarounds_arrow_dtype(pat, expected_data):
+    # GH#64872 - lookahead/lookbehind patterns should fall back to Python re
+    ser = pd.Series(["aa", "ab", "ba", "bb", None], dtype=ArrowDtype(pa.string()))
+    result = ser.str.replace(pat, "x", regex=True)
+    expected = pd.Series([*expected_data, None], dtype=ArrowDtype(pa.string()))
+    tm.assert_series_equal(result, expected)
 
 
 @pytest.mark.parametrize(

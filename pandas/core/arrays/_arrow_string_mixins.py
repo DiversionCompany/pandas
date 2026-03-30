@@ -226,17 +226,33 @@ class ArrowStringArrayMixin:
         flags: int = 0,
         regex: bool = True,
     ) -> Self:
+        if case is False:
+            # add case-insensitive flag
+            flags |= re.IGNORECASE
+
         if (
             isinstance(pat, re.Pattern)
             or callable(repl)
-            or not case
             or flags
             or (isinstance(repl, str) and r"\g<" in repl)
+            or (regex and self._has_unsupported_regex(pat))
         ):
-            raise NotImplementedError(
-                "replace is not supported with a re.Pattern, callable repl, "
-                "case=False, flags!=0, or when the replacement string contains "
-                "named group references (\\g<...>)"
+            # Fall back to Python's re module for unsupported cases:
+            # compiled regex, callable replacement, flags (including case=False),
+            # named group references, or regex features not supported by RE2
+            # (e.g. lookahead, lookbehind, backreferences). GH#64872
+            if regex or flags or callable(repl):
+                if not isinstance(pat, re.Pattern):
+                    if not regex:
+                        pat = re.escape(pat)
+                    pat = re.compile(pat, flags=flags)
+                n_sub = n if n >= 0 else 0
+                f = lambda x: pat.sub(repl=repl, string=x, count=n_sub)
+            else:
+                f = lambda x: x.replace(pat, repl, n)
+            result = self._apply_elementwise(f)
+            return self._from_pyarrow_array(
+                pa.chunked_array(result, type=self._pa_array.type)
             )
 
         func = pc.replace_substring_regex if regex else pc.replace_substring

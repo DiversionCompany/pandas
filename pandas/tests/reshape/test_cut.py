@@ -265,6 +265,22 @@ def test_na_handling(labels):
     tm.assert_almost_equal(result, expected)
 
 
+def test_cut_series_with_nan():
+    # GH#55684 - pd.cut should not raise when input Series contains NaN
+    s = Series([1.0, 2.0, np.nan, 4.0, 5.0])
+    result = cut(s, bins=3)
+
+    assert isinstance(result, Series)
+    assert result.dtype == "category"
+    # NaN input should produce NaN output
+    assert isna(result.iloc[2])
+    # Non-NaN inputs should produce valid intervals
+    assert not isna(result.iloc[0])
+    assert not isna(result.iloc[1])
+    assert not isna(result.iloc[3])
+    assert not isna(result.iloc[4])
+
+
 def test_inf_handling():
     data = np.arange(6)
     data_ser = Series(data, dtype="int64")

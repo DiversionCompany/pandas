@@ -364,3 +364,12 @@ def test_cast_pointwise_result_all_na_respects_original_dtype(arr):
     result = arr._cast_pointwise_result(values)
     assert result.dtype == arr.dtype
     assert all(x is pd.NA for x in result)
+
+
+@pytest.mark.parametrize("dtype", ["Int64", "Float64", "boolean"])
+def test_map_na_identity(dtype):
+    # GH#57390: pd.NA identity check should work in map() for masked dtypes
+    ser = pd.Series([pd.NA], dtype=dtype)
+    result = ser.map(lambda x: 1 if x is pd.NA else 2)
+    expected = pd.Series([1], dtype="Int64")
+    tm.assert_series_equal(result, expected)

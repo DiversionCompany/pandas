@@ -24,7 +24,10 @@ import numpy as np
 from pandas._config import is_nan_na
 
 from pandas._libs import lib
-from pandas._libs.missing import is_pdna_or_none
+from pandas._libs.missing import (
+    NA as libNA,
+    is_pdna_or_none,
+)
 from pandas._libs.tslibs import (
     Timedelta,
     Timestamp,
@@ -1896,7 +1899,14 @@ class ArrowExtensionArray(
 
     def map(self, mapper, na_action: Literal["ignore"] | None = None):
         if is_numeric_dtype(self.dtype):
-            return map_array(self.to_numpy(), mapper, na_action=na_action)
+            # GH#57390: pass na_value=libNA so that pd.NA identity checks
+            # (x is pd.NA) work correctly inside user-supplied functions.
+            result = map_array(
+                self.to_numpy(dtype=object, na_value=libNA),
+                mapper,
+                na_action=na_action,
+            )
+            return self._cast_pointwise_result(result)
         else:
             # For "mM" cases, the super() method passes `self` without the
             #  to_numpy call, which inside map_array casts to ndarray[object].

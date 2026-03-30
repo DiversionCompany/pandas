@@ -94,3 +94,34 @@ def test_concat_chain(styler):
     )"""
     )
     assert result == expected
+
+
+def test_hidden_columns(styler):
+    # GH#64663 - hidden columns should not create empty cells
+    result = styler.hide(subset=["B"], axis="columns").to_typst()
+    expected = dedent(
+        """\
+    #table(
+      columns: 3,
+      [], [A], [C],
+
+      [0], [0], [ab],
+      [1], [1], [cd],
+    )"""
+    )
+    assert result == expected
+
+
+def test_hidden_rows(styler):
+    # GH#64663 - hidden rows should not create empty cells
+    result = styler.hide(subset=[0], axis="index").to_typst()
+    expected = dedent(
+        """\
+    #table(
+      columns: 4,
+      [], [A], [B], [C],
+
+      [1], [1], [-1.22], [cd],
+    )"""
+    )
+    assert result == expected

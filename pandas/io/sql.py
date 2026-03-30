@@ -2534,8 +2534,23 @@ class SQLiteTable(SQLTable):
         convert_date = lambda val: date.fromisoformat(val.decode())
         convert_timestamp = lambda val: datetime.fromisoformat(val.decode())
 
-        sqlite3.register_converter("date", convert_date)
-        sqlite3.register_converter("timestamp", convert_timestamp)
+        # GH#64337: Only register converters if the user has not already registered
+        # custom converters for these type names. sqlite3.converters stores keys in
+        # uppercase. We preserve user-registered converters by only overriding when
+        # the existing converter is either absent, the Python sqlite3 module default
+        # (module "sqlite3.dbapi2"), or a previously pandas-registered converter
+        # (module "pandas.io.sql").
+        _non_user_modules = {"sqlite3.dbapi2", __name__}
+        existing_date_converter = sqlite3.converters.get("DATE")
+        if existing_date_converter is None or getattr(
+            existing_date_converter, "__module__", None
+        ) in _non_user_modules:
+            sqlite3.register_converter("date", convert_date)
+        existing_ts_converter = sqlite3.converters.get("TIMESTAMP")
+        if existing_ts_converter is None or getattr(
+            existing_ts_converter, "__module__", None
+        ) in _non_user_modules:
+            sqlite3.register_converter("timestamp", convert_timestamp)
 
     def sql_schema(self) -> str:
         return str(";\n".join(self.table))

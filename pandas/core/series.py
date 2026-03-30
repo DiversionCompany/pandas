@@ -2365,6 +2365,11 @@ class Series(base.IndexOpsMixin, NDFrame):  # type: ignore[misc]
 
         See Examples section.
 
+        For object dtype, bool values (``True`` and ``False``) are not
+        distinguished from their integer equivalents (``1`` and ``0``). This
+        means that ``True`` and ``1`` (or ``False`` and ``0``) will be treated
+        as the same value and only one of them will appear in the result.
+
         Examples
         --------
         >>> pd.Series([2, 1, 3, 3], name="A").unique()

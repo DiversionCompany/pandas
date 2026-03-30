@@ -1410,6 +1410,11 @@ class IndexOpsMixin(OpsMixin):
         -----
         Reference :ref:`the user guide <reshaping.factorize>` for more examples.
 
+        For object dtype, bool values (``True`` and ``False``) are not
+        distinguished from their integer equivalents (``1`` and ``0``). This
+        means that ``True`` and ``1`` (or ``False`` and ``0``) will be treated
+        as the same value and assigned the same code.
+
         Examples
         --------
         These examples all show factorize as a top-level method like

@@ -355,6 +355,13 @@ def unique(values):
     Index.unique : Return unique values from an Index.
     Series.unique : Return unique values of Series object.
 
+    Notes
+    -----
+    For object dtype, bool values (``True`` and ``False``) are not
+    distinguished from their integer equivalents (``1`` and ``0``). This
+    means that ``True`` and ``1`` (or ``False`` and ``0``) will be treated
+    as the same value and only one of them will appear in the result.
+
     Examples
     --------
     >>> pd.unique(pd.Series([2, 1, 3, 3]))
@@ -700,6 +707,11 @@ def factorize(
     Notes
     -----
     Reference :ref:`the user guide <reshaping.factorize>` for more examples.
+
+    For object dtype, bool values (``True`` and ``False``) are not
+    distinguished from their integer equivalents (``1`` and ``0``). This
+    means that ``True`` and ``1`` (or ``False`` and ``0``) will be treated
+    as the same value and assigned the same code.
 
     Examples
     --------

@@ -1001,3 +1001,35 @@ class TestSeriesPlots:
         x_limits = ax.get_xlim()
         assert x_limits[0] <= bar_xticks[0].get_position()[0]
         assert x_limits[1] >= bar_xticks[-1].get_position()[0]
+
+    def test_nullable_boolean_extension_array_plot(self):
+        # GH#64300 - plotting support for nullable boolean ExtensionArrays
+        s = Series(pd.array([True, False, True, None], dtype="boolean"))
+        ax = _check_plot_works(s.plot)
+        # Should produce a line with 3 non-NA points (NA becomes NaN)
+        assert ax is not None
+        result_ydata = ax.get_lines()[0].get_ydata()
+        assert len(result_ydata) == 4
+
+    @pytest.mark.parametrize(
+        "dtype",
+        [
+            "Int8",
+            "Int16",
+            "Int32",
+            "Int64",
+            "UInt8",
+            "UInt16",
+            "UInt32",
+            "UInt64",
+            "Float32",
+            "Float64",
+        ],
+    )
+    def test_nullable_numeric_extension_array_plot(self, dtype):
+        # GH#64300 - plotting support for nullable numeric ExtensionArrays
+        s = Series(pd.array([1, 2, None, 4], dtype=dtype))
+        ax = _check_plot_works(s.plot)
+        assert ax is not None
+        result_ydata = ax.get_lines()[0].get_ydata()
+        assert len(result_ydata) == 4

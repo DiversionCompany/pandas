@@ -1843,3 +1843,25 @@ def test_setitem_bool_dtype_with_boolean_indexer():
     s1[condition] = s2[condition]
     expected = Series([True, False, True], dtype=bool)
     tm.assert_series_equal(s1, expected)
+
+
+def test_setitem_1d_numpy_array_object_dtype():
+    # GH#53565 - Reassigning a value in a Series with a 1-element numpy array
+    # should retain the array shape, not squeeze to a scalar
+    s = Series(dtype=object)
+    arr = np.array([1])
+
+    # First assignment (new key): should store array with shape (1,)
+    s["x"] = arr
+    assert s["x"].shape == arr.shape, f"Expected shape {arr.shape}, got {s['x'].shape}"
+
+    # Reassignment (existing key): should also retain shape (1,)
+    s["x"] = arr
+    assert s["x"].shape == arr.shape, (
+        f"After reassignment, expected shape {arr.shape}, got {s['x'].shape}"
+    )
+
+    # Multi-element array should work too (regression check)
+    arr2 = np.array([0, 1])
+    s["y"] = arr2
+    assert s["y"].shape == arr2.shape

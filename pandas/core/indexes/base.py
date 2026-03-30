@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import abc
 from datetime import datetime
+from enum import Enum
 import functools
 from itertools import zip_longest
 import operator
@@ -3724,6 +3725,14 @@ class Index(IndexOpsMixin, PandasObject):
                 and any(isinstance(x, slice) for x in casted_key)
             ):
                 raise InvalidIndexError(key) from err
+            # GH#54386: if key is an Enum member and the lookup failed, try
+            # its .value so that e.g. df[MyEnum.A] works when index contains
+            # the enum's value (as was the case in pandas 1.x).
+            if isinstance(casted_key, Enum):
+                try:
+                    return self._engine.get_loc(casted_key.value)
+                except KeyError:
+                    pass
             raise KeyError(key) from err
         except TypeError:
             # If we have a listlike key, _check_indexing_error will raise

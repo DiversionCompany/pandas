@@ -2202,3 +2202,17 @@ def test_resample_sum_with_inat_value():
     result = df.resample("MS").apply(np.sum)
     expected = DataFrame([-1], index=date_range("2013-01-01", periods=1, freq="MS"))
     tm.assert_frame_equal(result, expected)
+
+
+def test_resample_day_closed_right_matches_24h():
+    # GH#62200 - resample("D", closed="right") should produce the same bin
+    # count as resample("24h", closed="right") after Day was decoupled from
+    # Tick in GH#61985.
+    index = date_range("1-1-2000", "2-15-2000", freq="h").union(
+        date_range("4-15-2000", "5-15-2000", freq="h")
+    )
+    s = Series(range(len(index)), index=index)
+    left = s.resample("D", label="right", closed="right").count()
+    right = s.resample("24h", label="right", closed="right").count()
+
+    tm.assert_series_equal(left, right, check_freq=False)

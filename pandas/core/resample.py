@@ -2927,7 +2927,10 @@ def _get_timestamp_range_edges(
     -------
     A tuple of length 2, containing the adjusted pd.Timestamp objects.
     """
-    if isinstance(freq, Tick):
+    if isinstance(freq, (Tick, Day)):
+        # GH#62200: Day is no longer a Tick subclass (GH#61985) but still
+        # has a fixed nanosecond duration and should use the same anchored
+        # bin-edge computation as other fixed-duration (Tick) frequencies.
         index_tz = first.tz
         if isinstance(origin, Timestamp) and (origin.tz is None) != (index_tz is None):
             raise ValueError("The origin must have the same timezone as the index.")
@@ -3036,7 +3039,7 @@ def _insert_nat_bin(
 def _adjust_dates_anchored(
     first: Timestamp,
     last: Timestamp,
-    freq: Tick,
+    freq: Tick | Day,
     closed: Literal["right", "left"] = "right",
     origin: TimeGrouperOrigin = "start_day",
     offset: Timedelta | None = None,
@@ -3052,7 +3055,10 @@ def _adjust_dates_anchored(
     if offset is not None:
         offset = offset.as_unit(unit)
 
-    freq_value = Timedelta(freq).as_unit(unit)._value
+    # GH#62200: Day is no longer a Tick subclass (GH#61985), so
+    # Timedelta(Day()) would raise. Use freq.nanos which both Tick and Day
+    # support, and convert to the target unit.
+    freq_value = Timedelta(nanoseconds=freq.nanos).as_unit(unit)._value
 
     origin_timestamp = 0  # origin == "epoch"
     if origin == "start_day":

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import collections
 from collections import abc
+from copy import deepcopy
 import functools
 from io import StringIO
 import itertools
@@ -27,6 +28,7 @@ from typing import (
     overload,
 )
 import warnings
+import weakref
 
 import numpy as np
 from numpy import ma
@@ -409,6 +411,7 @@ class DataFrame(NDFrame, OpsMixin):
     _accessors: set[str] = {"sparse"}
     _hidden_attrs: frozenset[str] = NDFrame._hidden_attrs | frozenset([])
     _mgr: BlockManager
+    _column_attrs: dict  # stores per-column attrs: {column_label: attrs_dict}
 
     # similar to __array_priority__, positions DataFrame before Series, Index,
     #  and ExtensionArray.  Should NOT be overridden by subclasses.
@@ -4725,6 +4728,15 @@ class DataFrame(NDFrame, OpsMixin):
         Series/TimeSeries will be conformed to the DataFrames index to
         ensure homogeneity.
         """
+        # Capture per-column attrs from the incoming Series before sanitization
+        # strips the metadata (GH#64711).
+        if isinstance(value, Series) and value.attrs:
+            self._column_attrs[key] = deepcopy(value.attrs)
+        elif key in self._column_attrs:
+            # Clear stored attrs when assigning a non-Series or a Series with
+            # empty attrs (the column's metadata is being overwritten).
+            del self._column_attrs[key]
+
         value, refs = self._sanitize_column(value)
 
         if (
@@ -4817,7 +4829,19 @@ class DataFrame(NDFrame, OpsMixin):
         # We get index=self.index bc values is a SingleBlockManager
         obj = self._constructor_sliced_from_mgr(values, axes=values.axes)
         obj._name = name
-        return obj.__finalize__(self)
+        result = obj.__finalize__(self)
+        # Propagate per-column attrs stored in the DataFrame (GH#64711).
+        # These override any attrs copied from the DataFrame-level attrs by
+        # __finalize__ above.
+        if self._column_attrs and name in self._column_attrs:
+            # Directly set _attrs to avoid triggering the write-back in
+            # Series.attrs.setter while we are initializing the Series.
+            object.__setattr__(result, "_attrs", deepcopy(self._column_attrs[name]))
+        # Store a weak reference to this DataFrame so that assigning to
+        # result.attrs writes back to self._column_attrs (GH#64711).
+        object.__setattr__(result, "_parent_df_ref", weakref.ref(self))
+        object.__setattr__(result, "_parent_col_name", name)
+        return result
 
     def _get_item(self, item: Hashable) -> Series:
         loc = self.columns.get_loc(item)

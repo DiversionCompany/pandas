@@ -11,6 +11,7 @@ from collections.abc import (
     Mapping,
     Sequence,
 )
+from copy import deepcopy
 import functools
 import operator
 import sys
@@ -24,6 +25,7 @@ from typing import (
     overload,
 )
 import warnings
+import weakref
 
 import numpy as np
 
@@ -339,6 +341,29 @@ class Series(base.IndexOpsMixin, NDFrame):  # type: ignore[misc]
         doc=base.IndexOpsMixin.hasnans.__doc__,
     )
     _mgr: SingleBlockManager
+
+    # attrs property override to support write-back to parent DataFrame (GH#64711).
+    # When a Series is obtained by column access on a DataFrame (e.g. df["A"]),
+    # setting attrs on the returned Series now propagates back to the DataFrame,
+    # so that subsequent df["A"].attrs calls return the updated attrs.
+    @property  # type: ignore[override]
+    def attrs(self) -> dict[Hashable, Any]:
+        return self._attrs
+
+    @attrs.setter
+    def attrs(self, value: Mapping[Hashable, Any]) -> None:
+        self._attrs = dict(value)
+        # Write back to the parent DataFrame if this Series was obtained from
+        # a DataFrame column access (GH#64711).
+        parent_ref = getattr(self, "_parent_df_ref", None)
+        col_name = getattr(self, "_parent_col_name", None)
+        if parent_ref is not None and col_name is not None:
+            parent = parent_ref()
+            if parent is not None:
+                if self._attrs:
+                    parent._column_attrs[col_name] = deepcopy(self._attrs)
+                elif col_name in parent._column_attrs:
+                    del parent._column_attrs[col_name]
 
     # ----------------------------------------------------------------------
     # Constructors

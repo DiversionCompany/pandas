@@ -204,6 +204,7 @@ Indexing
 - Bug in :meth:`Series.__getitem__` and :meth:`Series.loc.__getitem__` where using :class:`numpy.floating` scalars (e.g. ``np.float64(0.1)``) as index labels on a float-valued :class:`Index` could raise or return incorrect results (:issue:`57645`)
 - Bug in :class:`Series` where reassigning a value with a 1-element 1D :class:`numpy.ndarray` to an existing key in an ``object``-dtype :class:`Series` would incorrectly squeeze the array to a scalar (:issue:`53565`)
 - Clarified documentation of :class:`Index` constructor to note that NumPy array dtypes are preserved while Python list inputs use dtype inference (:issue:`64844`)
+- Bug where assigning :attr:`Series.attrs` on a :class:`DataFrame` column (e.g. ``df["A"].attrs = {...}``) had no effect after Copy-on-Write was enabled in pandas 3.0. The :class:`DataFrame` now stores per-column attrs and restores them on each column access (:issue:`64711`)
 -
 
 Missing

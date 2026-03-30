@@ -352,6 +352,48 @@ class TestDataFrameMisc:
         df2.attrs = {"c": 3}
         assert pd.merge(df1, df2).attrs == {}
 
+    def test_column_attrs_assignment(self):
+        # GH#64711: setting attrs on a column should persist in the DataFrame
+        df = DataFrame({"A": [1, 2], "B": [3, 4]})
+        df["A"].attrs = {"unit": "meters"}
+        assert df["A"].attrs == {"unit": "meters"}
+        # Column B should be unaffected
+        assert df["B"].attrs == {}
+
+    def test_column_attrs_assignment_via_series(self):
+        # GH#64711: assigning a Series with attrs back to a column stores attrs
+        df = DataFrame({"A": [1, 2]})
+        col = df["A"]
+        col.attrs = {"unit": "kg"}
+        df["A"] = col
+        assert df["A"].attrs == {"unit": "kg"}
+
+    def test_column_attrs_cleared_on_reassignment(self):
+        # GH#64711: assigning a plain array to a column clears column attrs
+        df = DataFrame({"A": [1, 2]})
+        df["A"].attrs = {"unit": "meters"}
+        assert df["A"].attrs == {"unit": "meters"}
+        # Overwrite with a plain list (no attrs)
+        df["A"] = [10, 20]
+        assert df["A"].attrs == {}
+
+    def test_column_attrs_independent_of_dataframe_attrs(self):
+        # GH#64711: column attrs and DataFrame-level attrs are separate
+        df = DataFrame({"A": [1, 2]})
+        df.attrs = {"description": "my df"}
+        df["A"].attrs = {"unit": "meters"}
+        assert df.attrs == {"description": "my df"}
+        assert df["A"].attrs == {"unit": "meters"}
+
+    def test_column_attrs_deepcopy(self):
+        # GH#64711: column attrs should be deepcopied (not shared)
+        df = DataFrame({"A": [1, 2]})
+        df["A"].attrs = {"tags": [1, 2]}
+        col1 = df["A"]
+        col2 = df["A"]
+        assert col1.attrs == col2.attrs
+        assert col1.attrs["tags"] is not col2.attrs["tags"]
+
     @pytest.mark.parametrize("allows_duplicate_labels", [True, False, None])
     def test_set_flags(
         self,

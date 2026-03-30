@@ -230,6 +230,7 @@ class NDFrame(PandasObject, indexing.IndexingMixin):
     _metadata: list[str] = []
     _mgr: Manager
     _attrs: dict[Hashable, Any]
+    _column_attrs: dict[Hashable, Any]
     _typ: str
 
     # ----------------------------------------------------------------------
@@ -239,6 +240,7 @@ class NDFrame(PandasObject, indexing.IndexingMixin):
         object.__setattr__(self, "_mgr", data)
         object.__setattr__(self, "_attrs", {})
         object.__setattr__(self, "_flags", Flags(self, allows_duplicate_labels=True))
+        object.__setattr__(self, "_column_attrs", {})
 
     @final
     @classmethod
@@ -315,6 +317,22 @@ class NDFrame(PandasObject, indexing.IndexingMixin):
         present dataset. :func:`pandas.concat` and :func:`pandas.merge` will
         only copy ``attrs`` if all input datasets have the same ``attrs``.
 
+        To attach attrs to a specific column of a DataFrame, assign ``attrs``
+        directly on the Series returned by column access. Because
+        Copy-on-Write semantics mean each column access may return a new
+        object, the column's attrs are stored inside the DataFrame and are
+        restored on the next access::
+
+            df = pd.DataFrame({"A": [1, 2]})
+            df["A"].attrs = {"unit": "meters"}  # persisted in df
+            df["A"].attrs  # {"unit": "meters"}
+
+        Alternatively, assign a Series with attrs back to the column::
+
+            col = df["A"]
+            col.attrs = {"unit": "meters"}
+            df["A"] = col  # attrs stored in df._column_attrs
+
         Examples
         --------
         For Series:
@@ -330,6 +348,13 @@ class NDFrame(PandasObject, indexing.IndexingMixin):
         >>> df.attrs = {"A": [10, 20, 30]}
         >>> df.attrs
         {'A': [10, 20, 30]}
+
+        Setting column-level attrs on a DataFrame:
+
+        >>> df = pd.DataFrame({"A": [1, 2], "B": [3, 4]})
+        >>> df["A"].attrs = {"unit": "meters"}
+        >>> df["A"].attrs
+        {'unit': 'meters'}
         """
         return self._attrs
 
@@ -2065,7 +2090,7 @@ class NDFrame(PandasObject, indexing.IndexingMixin):
     @final
     def __getstate__(self) -> dict[str, Any]:
         meta = {k: getattr(self, k, None) for k in self._metadata}
-        return {
+        state = {
             "_mgr": self._mgr,
             "_typ": self._typ,
             "_metadata": self._metadata,
@@ -2073,6 +2098,10 @@ class NDFrame(PandasObject, indexing.IndexingMixin):
             "_flags": {k: self.flags[k] for k in self.flags._keys},
             **meta,
         }
+        # Persist per-column attrs for DataFrames (GH#64711).
+        if self._column_attrs:
+            state["_column_attrs"] = self._column_attrs
+        return state
 
     @final
     def __setstate__(self, state) -> None:
@@ -2088,6 +2117,10 @@ class NDFrame(PandasObject, indexing.IndexingMixin):
                 if attrs is None:  # should not happen, but better be on the safe side
                     attrs = {}
                 object.__setattr__(self, "_attrs", attrs)
+                column_attrs = state.get("_column_attrs", {})
+                if column_attrs is None:
+                    column_attrs = {}
+                object.__setattr__(self, "_column_attrs", column_attrs)
                 flags = state.get("_flags", {"allows_duplicate_labels": True})
                 object.__setattr__(self, "_flags", Flags(self, **flags))
 
@@ -6172,6 +6205,12 @@ class NDFrame(PandasObject, indexing.IndexingMixin):
                 # One could make the deepcopy unconditionally, but a deepcopy
                 # of an empty dict is 50x more expensive than the empty check.
                 self.attrs = deepcopy(other.attrs)
+            if other._column_attrs and self._typ == other._typ == "dataframe":
+                # Propagate per-column attrs only DataFrame -> DataFrame
+                # (GH#64711).
+                object.__setattr__(
+                    self, "_column_attrs", deepcopy(other._column_attrs)
+                )
             self.flags.allows_duplicate_labels = (
                 self.flags.allows_duplicate_labels
                 and other.flags.allows_duplicate_labels

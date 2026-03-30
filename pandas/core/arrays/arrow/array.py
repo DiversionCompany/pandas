@@ -2725,11 +2725,13 @@ class ArrowExtensionArray(
         if not self.dtype._is_numeric:
             raise TypeError(f"Cannot interpolate with {self.dtype} dtype")
 
+        limit_gap = kwargs.get("limit_gap", None)
         if (
             method == "linear"
             and limit_area is None
             and limit is None
             and limit_direction == "forward"
+            and limit_gap is None
         ):
             values = self._pa_array.combine_chunks()
             na_value = pa.array([None], type=values.type)

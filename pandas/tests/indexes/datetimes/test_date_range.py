@@ -831,6 +831,47 @@ class TestDateRanges:
         with pytest.raises(ValueError, match=msg):
             date_range("1/1/2000", periods=2, freq=freq_removed)
 
+    def test_inclusive_with_start_end(self):
+        # GH#55293 - inclusive parameter should correctly exclude start/end
+        # Test inclusive='left' excludes end date
+        result = date_range("2020-01-01", "2020-01-05", freq="D", inclusive="left")
+        expected = date_range("2020-01-01", "2020-01-04", freq="D", inclusive="both")
+        tm.assert_index_equal(result, expected)
+
+        # Test inclusive='right' excludes start date
+        result = date_range("2020-01-01", "2020-01-05", freq="D", inclusive="right")
+        expected = date_range("2020-01-02", "2020-01-05", freq="D", inclusive="both")
+        tm.assert_index_equal(result, expected)
+
+        # Test inclusive='neither' excludes both start and end
+        result = date_range("2020-01-01", "2020-01-05", freq="D", inclusive="neither")
+        expected = date_range("2020-01-02", "2020-01-04", freq="D", inclusive="both")
+        tm.assert_index_equal(result, expected)
+
+        # Test inclusive='both' includes both start and end
+        result = date_range("2020-01-01", "2020-01-05", freq="D", inclusive="both")
+        assert len(result) == 5
+        assert result[0] == Timestamp("2020-01-01")
+        assert result[-1] == Timestamp("2020-01-05")
+
+    def test_inclusive_with_start_and_periods(self):
+        # GH#55293 - when only start + periods + freq are given (no explicit end),
+        # the inclusive parameter should not drop any endpoint since there is no
+        # explicit boundary to exclude.
+        result_left = date_range("2020-01-01", periods=5, freq="D", inclusive="left")
+        result_both = date_range("2020-01-01", periods=5, freq="D", inclusive="both")
+        # With only start+periods, there is no explicit end boundary to exclude
+        tm.assert_index_equal(result_left, result_both)
+
+    def test_inclusive_with_end_and_periods(self):
+        # GH#55293 - when only end + periods + freq are given (no explicit start),
+        # the inclusive parameter should not drop any endpoint since there is no
+        # explicit boundary to exclude.
+        result_right = date_range(end="2020-01-05", periods=5, freq="D", inclusive="right")
+        result_both = date_range(end="2020-01-05", periods=5, freq="D", inclusive="both")
+        # With only end+periods, there is no explicit start boundary to exclude
+        tm.assert_index_equal(result_right, result_both)
+
 
 class TestDateRangeTZ:
     """Tests for date_range with timezones"""

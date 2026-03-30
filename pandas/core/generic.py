@@ -7889,6 +7889,7 @@ class NDFrame(PandasObject, indexing.IndexingMixin):
         inplace: bool = False,
         limit_direction: Literal["forward", "backward", "both"] | None = None,
         limit_area: Literal["inside", "outside"] | None = None,
+        limit_gap: int | None = None,
         **kwargs,
     ) -> Self:
         """
@@ -7945,6 +7946,12 @@ class NDFrame(PandasObject, indexing.IndexingMixin):
             * 'inside': Only fill NaNs surrounded by valid values
               (interpolate).
             * 'outside': Only fill NaNs outside valid values (extrapolate).
+
+        limit_gap : int, optional
+            Maximum size of a consecutive NaN gap that will be filled.  If
+            a run of NaN values is strictly longer than ``limit_gap``, the
+            entire run is left unchanged regardless of ``limit`` or
+            ``limit_direction``.  Must be greater than 0 when specified.
 
         **kwargs : optional
             Keyword arguments to pass on to the interpolating function.
@@ -8047,6 +8054,19 @@ class NDFrame(PandasObject, indexing.IndexingMixin):
         2     9.0
         3    16.0
         Name: d, dtype: float64
+
+        Skip interpolation for NaN gaps larger than 1 with ``limit_gap``.
+
+        >>> s = pd.Series([0, np.nan, np.nan, np.nan, 4, np.nan, 6])
+        >>> s.interpolate(limit_gap=1)
+        0    0.0
+        1    NaN
+        2    NaN
+        3    NaN
+        4    4.0
+        5    5.0
+        6    6.0
+        dtype: float64
         """
         inplace = validate_bool_kwarg(inplace, "inplace")
 
@@ -8079,12 +8099,16 @@ class NDFrame(PandasObject, indexing.IndexingMixin):
         limit_direction = missing.infer_limit_direction(limit_direction, method)
 
         index = missing.get_interp_index(method, obj.index)
+        if limit_gap is not None and (not isinstance(limit_gap, int) or limit_gap < 1):
+            raise ValueError("limit_gap must be a positive integer.")
+
         new_data = obj._mgr.interpolate(
             method=method,
             index=index,
             limit=limit,
             limit_direction=limit_direction,
             limit_area=limit_area,
+            limit_gap=limit_gap,
             inplace=inplace,
             **kwargs,
         )

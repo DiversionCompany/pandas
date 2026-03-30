@@ -829,3 +829,54 @@ class TestSeriesInterpolateData:
         result = ser.interpolate(method="linear")
         expected = Series([1.0, 2.0, 3.0], dtype="Float64")
         tm.assert_series_equal(result, expected)
+
+    # GH#64588 - limit_gap parameter
+    def test_interp_limit_gap_basic(self):
+        # Gaps exceeding limit_gap should be left as NaN
+        s = Series([0, np.nan, np.nan, np.nan, 4, np.nan, 6.0])
+        # Gap of 3 (indices 1-3) exceeds limit_gap=1, gap of 1 (index 5) is OK
+        result = s.interpolate(limit_gap=1)
+        expected = Series([0.0, np.nan, np.nan, np.nan, 4.0, 5.0, 6.0])
+        tm.assert_series_equal(result, expected)
+
+    def test_interp_limit_gap_all_small(self):
+        # All gaps are <= limit_gap, should behave like normal interpolation
+        s = Series([0, np.nan, np.nan, 3, np.nan, 5.0])
+        # Both gaps are size 2, limit_gap=2 means they are filled
+        result = s.interpolate(limit_gap=2)
+        expected = Series([0.0, 1.0, 2.0, 3.0, 4.0, 5.0])
+        tm.assert_series_equal(result, expected)
+
+    def test_interp_limit_gap_all_large(self):
+        # All gaps exceed limit_gap, nothing should be filled
+        s = Series([0, np.nan, np.nan, np.nan, 4.0])
+        # Gap of 3 exceeds limit_gap=2
+        result = s.interpolate(limit_gap=2)
+        expected = Series([0.0, np.nan, np.nan, np.nan, 4.0])
+        tm.assert_series_equal(result, expected)
+
+    def test_interp_limit_gap_combined_with_limit(self):
+        # limit_gap and limit can be combined
+        # Gap of 1 (index 5) is <= limit_gap=2 but limited by limit=1
+        s = Series([0, np.nan, np.nan, np.nan, 4, np.nan, np.nan, 7.0])
+        # Gap [1,2,3] has length 3 > limit_gap=2, skipped entirely
+        # Gap [5,6] has length 2 == limit_gap=2, partially filled by limit=1
+        result = s.interpolate(limit_gap=2, limit=1)
+        expected = Series([0.0, np.nan, np.nan, np.nan, 4.0, 5.0, np.nan, 7.0])
+        tm.assert_series_equal(result, expected)
+
+    def test_interp_limit_gap_invalid(self):
+        # limit_gap must be a positive integer
+        s = Series([0, np.nan, 1.0])
+        msg = "limit_gap must be a positive integer."
+        with pytest.raises(ValueError, match=msg):
+            s.interpolate(limit_gap=0)
+        with pytest.raises(ValueError, match=msg):
+            s.interpolate(limit_gap=-1)
+
+    def test_interp_limit_gap_none(self):
+        # limit_gap=None is the default and should behave normally
+        s = Series([0, np.nan, np.nan, np.nan, 4.0])
+        result = s.interpolate(limit_gap=None)
+        expected = s.interpolate()
+        tm.assert_series_equal(result, expected)

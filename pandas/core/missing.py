@@ -371,6 +371,7 @@ def interpolate_2d_inplace(
     limit_area: str | None = None,
     fill_value: Any | None = None,
     mask=None,
+    limit_gap: int | None = None,
     **kwargs,
 ) -> None:
     """
@@ -419,6 +420,7 @@ def interpolate_2d_inplace(
             fill_value=fill_value,
             bounds_error=False,
             mask=mask,
+            limit_gap=limit_gap,
             **kwargs,
         )
 
@@ -447,6 +449,44 @@ def _index_to_interp_indices(index: Index, method: str) -> np.ndarray:
     return inds
 
 
+def _nans_in_large_gaps(
+    invalid: npt.NDArray[np.bool_], limit_gap: int
+) -> np.ndarray:
+    """
+    Return indices of NaN values that belong to consecutive NaN runs whose
+    length exceeds ``limit_gap``.
+
+    Parameters
+    ----------
+    invalid : np.ndarray[bool]
+        Boolean mask where True indicates a NaN/missing value.
+    limit_gap : int
+        Maximum allowed size of a consecutive NaN gap.  Any run of NaNs
+        strictly longer than this value will be preserved (not filled).
+
+    Returns
+    -------
+    np.ndarray
+        Sorted array of integer indices that should be preserved as NaN.
+    """
+    preserve: list[int] = []
+    n = len(invalid)
+    i = 0
+    while i < n:
+        if invalid[i]:
+            # find the end of this run
+            j = i
+            while j < n and invalid[j]:
+                j += 1
+            run_length = j - i
+            if run_length > limit_gap:
+                preserve.extend(range(i, j))
+            i = j
+        else:
+            i += 1
+    return np.array(preserve, dtype=np.intp)
+
+
 def _interpolate_1d(
     indices: np.ndarray,
     yvalues: np.ndarray,
@@ -458,6 +498,7 @@ def _interpolate_1d(
     bounds_error: bool = False,
     order: int | None = None,
     mask=None,
+    limit_gap: int | None = None,
     **kwargs,
 ) -> None:
     """
@@ -524,6 +565,11 @@ def _interpolate_1d(
         mid_nans = np.setdiff1d(all_nans, start_nans, assume_unique=True)
         mid_nans = np.setdiff1d(mid_nans, end_nans, assume_unique=True)
         preserve_nans = np.union1d(preserve_nans, mid_nans)
+
+    # GH#64588 - if limit_gap is set, preserve all NaNs in runs that exceed it
+    if limit_gap is not None:
+        gap_nans = _nans_in_large_gaps(invalid, limit_gap)
+        preserve_nans = np.union1d(preserve_nans, gap_nans)
 
     is_datetimelike = yvalues.dtype.kind in "mM"
 

@@ -2779,3 +2779,41 @@ def test_stack_preserves_na(dtype, na_value, test_multiindex):
         )
     expected = Series(1, index=expected_index)
     tm.assert_series_equal(result, expected)
+
+
+def test_stack_nat_in_datetimeindex():
+    # GH#57152 - df.stack() returns wrong data when NaT is in index (regression)
+    idx = pd.DatetimeIndex(["2020-01-01", pd.NaT, "2020-01-03"])
+    df = DataFrame({"A": [1, 2, 3], "B": [4, 5, 6]}, index=idx)
+    result = df.stack()
+
+    expected_index = MultiIndex.from_arrays(
+        [
+            pd.DatetimeIndex(["2020-01-01", "2020-01-01", pd.NaT, pd.NaT, "2020-01-03", "2020-01-03"]),
+            Index(["A", "B", "A", "B", "A", "B"]),
+        ]
+    )
+    expected = Series([1, 4, 2, 5, 3, 6], index=expected_index)
+    tm.assert_series_equal(result, expected)
+
+
+def test_stack_nat_in_datetimeindex_multiindex():
+    # GH#57152 - df.stack() returns wrong data when NaT is in MultiIndex (regression)
+    idx = pd.MultiIndex.from_arrays(
+        [
+            pd.DatetimeIndex(["2020-01-01", pd.NaT, "2020-01-03"]),
+            Index(["x", "y", "z"]),
+        ]
+    )
+    df = DataFrame({"A": [1, 2, 3], "B": [4, 5, 6]}, index=idx)
+    result = df.stack()
+
+    expected_index = pd.MultiIndex.from_arrays(
+        [
+            pd.DatetimeIndex(["2020-01-01", "2020-01-01", pd.NaT, pd.NaT, "2020-01-03", "2020-01-03"]),
+            Index(["x", "x", "y", "y", "z", "z"]),
+            Index(["A", "B", "A", "B", "A", "B"]),
+        ]
+    )
+    expected = Series([1, 4, 2, 5, 3, 6], index=expected_index)
+    tm.assert_series_equal(result, expected)

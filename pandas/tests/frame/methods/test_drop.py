@@ -544,6 +544,19 @@ class TestDataFrameDrop:
         ).set_index(idx)
         tm.assert_frame_equal(result, expected)
 
+    @pytest.mark.parametrize("idx, level", [(["a", "b"], 0), (["a"], None)])
+    def test_drop_index_arrow_dtype_na(self, idx, level):
+        # GH#63304
+        pytest.importorskip("pyarrow")
+        df = DataFrame(
+            {"a": [1, 2, 2, pd.NA], "b": 100}, dtype="int64[pyarrow]"
+        ).set_index(idx)
+        result = df.drop(Index([2, pd.NA]), level=level)
+        expected = DataFrame(
+            {"a": [1], "b": 100}, dtype="int64[pyarrow]"
+        ).set_index(idx)
+        tm.assert_frame_equal(result, expected)
+
     def test_drop_parse_strings_datetime_index(self):
         # GH #5355
         df = DataFrame(

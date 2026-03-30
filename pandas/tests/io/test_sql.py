@@ -3895,6 +3895,54 @@ def test_roundtripping_datetimes_detect_types(sqlite_builtin_detect_types):
     assert result == Timestamp("2020-12-31 12:00:00.000000")
 
 
+def test_to_sql_preserves_user_registered_sqlite_converters():
+    # GH#64337: to_sql() should not override user-registered sqlite3 converters
+    sentinel = object()
+    results = {}
+
+    def custom_date_converter(val):
+        results["date_converter_called"] = True
+        return sentinel
+
+    def custom_timestamp_converter(val):
+        results["timestamp_converter_called"] = True
+        return sentinel
+
+    # Register custom converters BEFORE calling to_sql
+    sqlite3.register_converter("date", custom_date_converter)
+    sqlite3.register_converter("timestamp", custom_timestamp_converter)
+
+    try:
+        # Verify pandas does not override user-registered converters
+        assert sqlite3.converters.get("DATE") is custom_date_converter, (
+            "to_sql() must not override user-registered 'date' converter"
+        )
+        assert sqlite3.converters.get("TIMESTAMP") is custom_timestamp_converter, (
+            "to_sql() must not override user-registered 'timestamp' converter"
+        )
+
+        conn = sqlite3.connect(":memory:", detect_types=sqlite3.PARSE_DECLTYPES)
+        try:
+            df = DataFrame({"d": [date(2020, 1, 1)], "t": [datetime(2020, 1, 1, 12)]})
+            df.to_sql("test", conn, if_exists="replace", index=False)
+
+            # After to_sql, user converters must still be registered
+            assert sqlite3.converters.get("DATE") is custom_date_converter, (
+                "to_sql() must not override user-registered 'date' converter"
+            )
+            assert sqlite3.converters.get("TIMESTAMP") is custom_timestamp_converter, (
+                "to_sql() must not override user-registered 'timestamp' converter"
+            )
+        finally:
+            conn.close()
+    finally:
+        # Restore Python default converters to avoid side effects on other tests
+        sqlite3.register_converter("date", lambda val: date.fromisoformat(val.decode()))
+        sqlite3.register_converter(
+            "timestamp", lambda val: datetime.fromisoformat(val.decode())
+        )
+
+
 @pytest.mark.db
 def test_psycopg2_schema_support(postgresql_psycopg2_engine):
     conn = postgresql_psycopg2_engine

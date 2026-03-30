@@ -2229,8 +2229,15 @@ class SingleBlockManager(BaseBlockManager):
             #  dt64/td64, which do their own validation.
             value = np_can_hold_element(arr.dtype, value)
 
-        if isinstance(value, np.ndarray) and value.ndim == 1 and len(value) == 1:
+        if (
+            isinstance(value, np.ndarray)
+            and value.ndim == 1
+            and len(value) == 1
+            and not (isinstance(arr, np.ndarray) and arr.dtype == np.dtype("object"))
+        ):
             # NumPy 1.25 deprecation: https://github.com/numpy/numpy/pull/10615
+            # GH#53565: skip extraction for object-dtype arrays to allow storing
+            # 1-element numpy arrays as Python objects.
             value = value[0, ...]
 
         arr[indexer] = value

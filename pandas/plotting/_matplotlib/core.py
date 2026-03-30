@@ -30,6 +30,7 @@ from pandas.util._exceptions import find_stack_level
 from pandas.core.dtypes.common import (
     is_any_real_numeric_dtype,
     is_bool,
+    is_bool_dtype,
     is_float,
     is_float_dtype,
     is_hashable,
@@ -655,9 +656,12 @@ class MPLPlot(ABC):
             return data
 
         # GH32073: cast to float if values contain nulled integers
-        if (is_integer_dtype(data.dtype) or is_float_dtype(data.dtype)) and isinstance(
-            data.dtype, ExtensionDtype
-        ):
+        # GH64300: also handle nullable boolean ExtensionArrays
+        if (
+            is_integer_dtype(data.dtype)
+            or is_float_dtype(data.dtype)
+            or is_bool_dtype(data.dtype)
+        ) and isinstance(data.dtype, ExtensionDtype):
             return data.to_numpy(dtype="float", na_value=np.nan)
 
         # GH25587: cast ExtensionArray of pandas (IntegerArray, etc.) to
@@ -698,8 +702,10 @@ class MPLPlot(ABC):
         include_type = [np.number, "datetime", "datetimetz", "timedelta"]
 
         # GH23719, allow plotting boolean
+        # GH64300, always include nullable boolean ExtensionArrays
         if self.include_bool is True:
             include_type.append(np.bool_)
+        include_type.append("boolean")
 
         # GH22799, exclude datetime-like type for boxplot
         exclude_type = None

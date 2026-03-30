@@ -310,6 +310,7 @@ Plotting:
 - :meth:`Series.plot` now correctly handle the ``ylabel`` parameter for pie charts, allowing for explicit control over the y-axis label (:issue:`58239`)
 - Added missing parameter ``weights`` in :meth:`DataFrame.plot.kde` for the estimation of the PDF (:issue:`59337`)
 - :meth:`DataFrame.plot.scatter` argument ``c`` now accepts a column of strings, where rows with the same string are colored identically (:issue:`16827` and :issue:`16485`)
+- :meth:`Series.plot` and :meth:`DataFrame.plot` now support nullable boolean :class:`ExtensionArray` dtypes (``boolean``) by converting them to float arrays for plotting (:issue:`64300`)
 
 ExtensionArray:
 

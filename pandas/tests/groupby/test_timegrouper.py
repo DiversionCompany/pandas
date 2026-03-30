@@ -982,3 +982,59 @@ class TestGroupBy:
             dtype="timestamp[ns, America/Denver][pyarrow]",
         )
         tm.assert_index_equal(result, expected)
+
+    def test_groupby_tz_aware_column_result_index(self):
+        # GH#57192 - regression: groupby on a tz-aware datetime column should
+        # produce a result index with the correct DatetimeTZDtype (not object).
+        df = DataFrame(
+            {
+                "value": [1, 2, 3, 4],
+                "group": DatetimeIndex(
+                    ["2020-01-01", "2020-01-01", "2020-01-02", "2020-01-02"],
+                    tz="UTC",
+                ),
+            }
+        )
+        result = df.groupby("group")["value"].sum()
+
+        expected_index = DatetimeIndex(
+            ["2020-01-01", "2020-01-02"], tz="UTC", name="group"
+        )
+        expected = Series([3, 7], index=expected_index, name="value")
+        tm.assert_series_equal(result, expected)
+
+        # Verify the result index has the correct tz-aware dtype
+        assert isinstance(result.index, DatetimeIndex)
+        assert result.index.tz is not None
+        assert str(result.index.tz) == "UTC"
+
+    def test_groupby_tz_aware_column_multiple_timezones(self):
+        # GH#57192 - verify that different timezones are preserved in result index
+        df = DataFrame(
+            {
+                "value": [10, 20, 30, 40, 50, 60],
+                "group": DatetimeIndex(
+                    [
+                        "2020-01-01",
+                        "2020-01-01",
+                        "2020-01-02",
+                        "2020-01-02",
+                        "2020-01-03",
+                        "2020-01-03",
+                    ],
+                    tz="US/Eastern",
+                ),
+            }
+        )
+        result = df.groupby("group")["value"].sum()
+
+        expected_index = DatetimeIndex(
+            ["2020-01-01", "2020-01-02", "2020-01-03"],
+            tz="US/Eastern",
+            name="group",
+        )
+        expected = Series([30, 70, 110], index=expected_index, name="value")
+        tm.assert_series_equal(result, expected)
+
+        assert isinstance(result.index, DatetimeIndex)
+        assert result.index.tz is not None

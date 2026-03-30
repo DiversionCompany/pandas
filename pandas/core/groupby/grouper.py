@@ -29,11 +29,15 @@ from pandas.core.dtypes.common import (
     is_list_like,
     is_scalar,
 )
-from pandas.core.dtypes.dtypes import CategoricalDtype
+from pandas.core.dtypes.dtypes import (
+    CategoricalDtype,
+    DatetimeTZDtype,
+)
 
 from pandas.core import algorithms
 from pandas.core.arrays import (
     Categorical,
+    DatetimeArray,
     ExtensionArray,
 )
 import pandas.core.common as com
@@ -681,6 +685,21 @@ class Grouping:
             codes, uniques = algorithms.factorize(  # type: ignore[assignment]
                 self.grouping_vector, sort=self._sort, use_na_sentinel=self._dropna
             )
+            # GH#57192: ensure that tz-aware datetime grouping vectors always
+            # produce DatetimeArray uniques with the correct timezone.  The
+            # factorize path goes through _values_for_factorize which strips the
+            # ExtensionDtype wrapper, and in rare edge cases the reconstruction
+            # may not restore a full DatetimeArray (e.g. when the result is a
+            # plain ndarray).  Wrapping here guarantees the dtype is preserved so
+            # that result_index_and_ids builds a DatetimeIndex with the correct tz.
+            if isinstance(
+                getattr(self.grouping_vector, "dtype", None), DatetimeTZDtype
+            ) and not isinstance(uniques, DatetimeArray):
+                dtype = self.grouping_vector.dtype  # type: ignore[union-attr]
+                np_dtype = np.dtype(f"datetime64[{dtype.unit}]")
+                uniques = DatetimeArray._simple_new(  # type: ignore[assignment]
+                    uniques.view(np_dtype), dtype=dtype
+                )
         return codes, uniques
 
     @cache_readonly

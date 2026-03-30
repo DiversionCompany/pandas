@@ -19,6 +19,7 @@ from pandas._libs.tslibs import Timestamp
 from pandas.core.dtypes.common import (
     is_list_like,
     is_scalar,
+    is_string_dtype,
 )
 
 import pandas.core.common as com
@@ -263,11 +264,26 @@ def _in(x, y):
     """
     Compute the vectorized membership of ``x in y`` if possible, otherwise
     use Python.
+
+    When ``x`` is a scalar string and ``y`` is a Series or array with string
+    dtype, this performs substring containment (like Python's ``in`` operator
+    for strings) rather than element membership testing.
     """
     try:
         return x.isin(y)
     except AttributeError:
         if is_list_like(x):
+            # GH#64391: When x is a single string element wrapped in a list
+            # (from _rewrite_membership_op) and y is a string-dtype Series,
+            # use str.contains for proper substring containment semantics,
+            # matching Python's ``'sub' in 'string'`` behavior.
+            if (
+                len(x) == 1
+                and isinstance(x[0], str)
+                and hasattr(y, "str")
+                and is_string_dtype(getattr(y, "dtype", None))
+            ):
+                return y.str.contains(x[0], regex=False)
             try:
                 return y.isin(x)
             except AttributeError:
@@ -279,11 +295,26 @@ def _not_in(x, y):
     """
     Compute the vectorized membership of ``x not in y`` if possible,
     otherwise use Python.
+
+    When ``x`` is a scalar string and ``y`` is a Series or array with string
+    dtype, this performs substring containment negation (like Python's
+    ``not in`` operator for strings) rather than element membership testing.
     """
     try:
         return ~x.isin(y)
     except AttributeError:
         if is_list_like(x):
+            # GH#64391: When x is a single string element wrapped in a list
+            # (from _rewrite_membership_op) and y is a string-dtype Series,
+            # use str.contains for proper substring containment semantics,
+            # matching Python's ``'sub' not in 'string'`` behavior.
+            if (
+                len(x) == 1
+                and isinstance(x[0], str)
+                and hasattr(y, "str")
+                and is_string_dtype(getattr(y, "dtype", None))
+            ):
+                return ~y.str.contains(x[0], regex=False)
             try:
                 return ~y.isin(x)
             except AttributeError:

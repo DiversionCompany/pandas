@@ -187,6 +187,7 @@ Conversion
 Strings
 ^^^^^^^
 - Bug in :class:`~pandas.arrays.ArrowExtensionArray` where constructing a string array from a list containing ``np.nan`` values raised an ``ArrowTypeError`` (:issue:`64578`)
+- Bug in :meth:`DataFrame.eval` and :func:`eval` where ``'substring' in column`` did not perform string substring containment for string-dtype columns, instead performing element membership testing; now matches Python's ``in`` operator semantics for strings (:issue:`64391`)
 -
 
 Interval

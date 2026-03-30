@@ -220,6 +220,7 @@ Missing data handling
    Series.interpolate
    Series.isna
    Series.isnull
+   Series.nearest_time_fill
    Series.notna
    Series.notnull
    Series.replace

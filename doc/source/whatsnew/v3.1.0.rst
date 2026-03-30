@@ -28,6 +28,7 @@ enhancement2
 
 Other enhancements
 ^^^^^^^^^^^^^^^^^^
+- Added :meth:`Series.nearest_time_fill` and :meth:`DataFrame.nearest_time_fill` to fill NA/NaN values with the nearest non-NaN observation by time distance (:issue:`64074`)
 - :meth:`.DataFrameGroupBy.agg` now allows for the provided ``func`` to return a NumPy array (:issue:`63957`)
 - Added :meth:`ExtensionArray.count` (:issue:`64450`)
 - Display formatting for float sequences in DataFrame cells now respects the ``display.precision`` option (:issue:`60503`).

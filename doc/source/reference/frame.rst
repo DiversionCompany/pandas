@@ -215,6 +215,7 @@ Missing data handling
    DataFrame.interpolate
    DataFrame.isna
    DataFrame.isnull
+   DataFrame.nearest_time_fill
    DataFrame.notna
    DataFrame.notnull
    DataFrame.replace

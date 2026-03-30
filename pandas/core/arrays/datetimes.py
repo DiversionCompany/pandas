@@ -3115,6 +3115,13 @@ def _generate_range(
         end = start + (periods - 1) * offset  # type: ignore[operator]
 
     if start is None:
+        # GH#64834: if end is not on the offset, roll it back so that we
+        # generate exactly `periods` on-offset dates ending at/before end.
+        if end is not None and not offset.is_on_offset(end):
+            if offset.n >= 0:
+                end = offset.rollback(end)  # type: ignore[assignment]
+            else:
+                end = offset.rollforward(end)  # type: ignore[assignment]
         # error: No overload variant of "__radd__" of "BaseOffset" matches
         # argument type "None"
         start = end - (periods - 1) * offset  # type: ignore[operator]

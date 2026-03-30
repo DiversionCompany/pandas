@@ -1070,6 +1070,15 @@ class TestBusinessDateRange:
         assert dr[0] == firstDate
         assert dr[-1] == end
 
+    def test_end_not_on_offset_periods(self):
+        # GH#64834: bdate_range should return exactly `periods` business days
+        # when `end` falls on a non-business day (e.g. a weekend).
+        # 2026-03-29 is a Sunday.
+        dr = bdate_range(end="20260329", periods=5)
+        assert len(dr) == 5
+        # Last business day on or before the Sunday end is Friday 2026-03-27
+        assert dr[-1] == Timestamp("2026-03-27")
+
     def test_date_parse_failure(self):
         badly_formed_date = "2007/100/1"
 

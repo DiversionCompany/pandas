@@ -244,6 +244,38 @@ def test_object_series_ok():
     tm.assert_series_equal(np.add(ser, Dummy(1)), pd.Series(np.add(ser, Dummy(1))))
 
 
+@pytest.mark.parametrize(
+    "ufunc", [np.logical_or, np.logical_and, np.logical_xor]
+)
+def test_logical_ufunc_binary(ufunc):
+    # GH#54416 - np.logical_or/and/xor should work with boolean Series
+    s1 = pd.Series([True, False, True])
+    s2 = pd.Series([False, True, False])
+    result = ufunc(s1, s2)
+    expected = pd.Series(ufunc(s1.to_numpy(), s2.to_numpy()))
+    tm.assert_series_equal(result, expected)
+
+
+def test_logical_not_ufunc():
+    # GH#54416 - np.logical_not should work with boolean Series
+    s1 = pd.Series([True, False, True])
+    result = np.logical_not(s1)
+    expected = pd.Series(np.logical_not(s1.to_numpy()))
+    tm.assert_series_equal(result, expected)
+
+
+@pytest.mark.parametrize(
+    "ufunc", [np.logical_or, np.logical_and, np.logical_xor]
+)
+def test_logical_ufunc_nullable_boolean(ufunc):
+    # GH#54416 - np.logical_or/and/xor should work with nullable boolean Series
+    s1 = pd.Series([True, False, None], dtype="boolean")
+    s2 = pd.Series([False, True, False], dtype="boolean")
+    result = ufunc(s1, s2)
+    # result should be a BooleanArray-backed Series
+    assert result.dtype == pd.BooleanDtype()
+
+
 @pytest.fixture(
     params=[
         pd.array([1, 3, 2], dtype=np.int64),

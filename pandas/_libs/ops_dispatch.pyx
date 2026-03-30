@@ -21,11 +21,13 @@ DISPATCHED_UFUNCS = {
     "neg",
     "pos",
     "abs",
+    "invert",
 }
 UNARY_UFUNCS = {
     "neg",
     "pos",
     "abs",
+    "invert",
 }
 UFUNC_ALIASES = {
     "subtract": "sub",
@@ -47,6 +49,10 @@ UFUNC_ALIASES = {
     "negative": "neg",
     "absolute": "abs",
     "positive": "pos",
+    "logical_or": "or",
+    "logical_and": "and",
+    "logical_xor": "xor",
+    "logical_not": "invert",
 }
 
 # For op(., Array) -> Array.__r{op}__

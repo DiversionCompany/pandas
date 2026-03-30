@@ -552,12 +552,26 @@ class DatetimeArray(dtl.TimelikeOps, dtl.DatelikeOps):
             if not left_inclusive and not right_inclusive:
                 i8values = i8values[1:-1]
         else:
-            start_i8 = Timestamp(start)._value
-            end_i8 = Timestamp(end)._value
             if not left_inclusive or not right_inclusive:
-                if not left_inclusive and len(i8values) and i8values[0] == start_i8:
+                # GH#55293: only compare against start/end when they are not
+                # None (i.e. they were explicitly provided by the caller).
+                # When start or end is None it means only `periods` was given
+                # for that side, and there is no explicit boundary to exclude.
+                start_i8 = start._value if start is not None else None
+                end_i8 = end._value if end is not None else None
+                if (
+                    not left_inclusive
+                    and start_i8 is not None
+                    and len(i8values)
+                    and i8values[0] == start_i8
+                ):
                     i8values = i8values[1:]
-                if not right_inclusive and len(i8values) and i8values[-1] == end_i8:
+                if (
+                    not right_inclusive
+                    and end_i8 is not None
+                    and len(i8values)
+                    and i8values[-1] == end_i8
+                ):
                     i8values = i8values[:-1]
 
         dt64_values = i8values.view(f"datetime64[{unit}]")

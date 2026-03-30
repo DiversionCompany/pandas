@@ -193,6 +193,36 @@ def test_int64_uint64_range(all_parsers, val):
     tm.assert_frame_equal(result, expected)
 
 
+@skip_pyarrow  # GH#55232: pyarrow parses to float64 losing precision
+def test_very_large_int_preserved_as_object(all_parsers):
+    # GH#55232 - integers larger than uint64 max should be preserved
+    # as Python int objects with object dtype, not silently wrapped or ignored.
+    parser = all_parsers
+    val = 99999999999999999999  # > UINT64_MAX (~1.8e19)
+    csv_data = f"col\n{val}\n"
+    result = parser.read_csv(StringIO(csv_data))
+    expected = DataFrame({"col": [val]})
+    tm.assert_frame_equal(result, expected)
+
+
+@skip_pyarrow  # GH#55232: pyarrow parses to float64 losing precision
+@pytest.mark.parametrize(
+    "val",
+    [
+        99999999999999999999,  # 20 nines, >> UINT64_MAX
+        -99999999999999999999,  # negative of above
+        10**30,  # very large positive
+    ],
+)
+def test_extremely_large_int_object_dtype(all_parsers, val):
+    # GH#55232 - very large integers (beyond uint64 range) should be returned
+    # as Python ints with object dtype, preserving full precision.
+    parser = all_parsers
+    result = parser.read_csv(StringIO(str(val)), header=None)
+    expected = DataFrame([val])
+    tm.assert_frame_equal(result, expected)
+
+
 @skip_pyarrow  # CSV parse error: Empty CSV file or block
 @pytest.mark.parametrize(
     "val", [np.iinfo(np.uint64).max + 1, np.iinfo(np.int64).min - 1]

@@ -538,6 +538,30 @@ class TestDataFrameAnalytics:
             result = nanops.nanvar(arr, axis=0)
             assert not (result < 0).any()
 
+    def test_var_axis1_mixed_dtypes_returns_float(self):
+        # GH#55194: var/std/sem with axis=1 on mixed-dtype DataFrame should
+        # return float64, not object dtype.
+        df = DataFrame(
+            {
+                "A": [1, -2, 3, -4, 5] * 3,
+                "B": [1.0, -2, 3, -4, 5] * 3,
+                "C": [-6.0, -7, -8, -9, 10] * 3,
+                "D": [True, False, True, False, False] * 3,
+            }
+        )
+        result = df.var(axis=1)
+        assert result.dtype == np.float64, f"Expected float64, got {result.dtype}"
+
+        result_std = df.std(axis=1)
+        assert result_std.dtype == np.float64, (
+            f"Expected float64, got {result_std.dtype}"
+        )
+
+        result_sem = df.sem(axis=1)
+        assert result_sem.dtype == np.float64, (
+            f"Expected float64, got {result_sem.dtype}"
+        )
+
     @pytest.mark.parametrize("meth", ["sem", "var", "std"])
     def test_numeric_only_flag(self, meth):
         # GH 9201

@@ -34,6 +34,7 @@ Bug fixes
 - Fixed bug in the :meth:`~Series.sum` method with python-backed string dtype returning incorrect value for an empty Series and ignoring the ``min_count`` argument (:issue:`64683`)
 - Fixed bug in :meth:`DataFrame.sum` crashing on an empty :class:`DataFrame` with both string and numeric columns (:issue:`64657`)
 - Fixed bug where :meth:`DataFrame.div` ignored the ``axis`` argument when used with ``level`` for MultiIndex columns (:issue:`64428`)
+- Fixed regression in :meth:`DataFrame.var`, :meth:`DataFrame.std`, and :meth:`DataFrame.sem` with ``axis=1`` returning ``object`` dtype instead of ``float64`` when the DataFrame contains mixed numeric dtypes (e.g. ``int``, ``float``, ``bool``) (:issue:`55194`)
 
 .. ---------------------------------------------------------------------------
 .. _whatsnew_302.contributors:

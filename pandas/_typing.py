@@ -414,7 +414,7 @@ JSONEngine: TypeAlias = Literal["ujson", "pyarrow"]
 XMLParsers: TypeAlias = Literal["lxml", "etree"]
 
 # read_html flavors
-HTMLFlavors: TypeAlias = Literal["lxml", "html5lib", "bs4"]
+HTMLFlavors: TypeAlias = Literal["lxml", "html5lib", "bs4", "html.parser"]
 
 # Interval closed type
 IntervalLeftRight: TypeAlias = Literal["left", "right"]

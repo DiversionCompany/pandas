@@ -672,6 +672,70 @@ class _BeautifulSoupHtml5LibFrameParser(_HtmlFrameParser):
         return soup
 
 
+class _BeautifulSoupHtmlParserFrameParser(_BeautifulSoupHtml5LibFrameParser):
+    """
+    HTML to DataFrame parser that uses BeautifulSoup with Python's built-in
+    html.parser under the hood.
+
+    This parser correctly handles nested tables by only selecting <tr> elements
+    that are direct children of the immediate <thead>/<tbody>/<tfoot>, rather
+    than recursively selecting all descendant <tr> elements (which would
+    inadvertently include rows from nested tables).
+
+    See Also
+    --------
+    pandas.io.html._HtmlFrameParser
+    pandas.io.html._BeautifulSoupHtml5LibFrameParser
+    """
+
+    def _parse_thead_tr(self, table):
+        # Only select <tr> elements that are direct children of each <thead>
+        # to avoid picking up rows from nested tables.
+        result = []
+        for thead in table.find_all("thead", recursive=False):
+            result.extend(thead.find_all("tr", recursive=False))
+        return result
+
+    def _parse_tbody_tr(self, table):
+        # Check for explicit <tbody> elements first (direct children only).
+        tbodies = table.find_all("tbody", recursive=False)
+        if tbodies:
+            result = []
+            for tbody in tbodies:
+                result.extend(tbody.find_all("tr", recursive=False))
+            return result
+        # Fall back to direct <tr> children of the table element.
+        return table.find_all("tr", recursive=False)
+
+    def _parse_tfoot_tr(self, table):
+        # Only select <tr> elements that are direct children of each <tfoot>
+        # to avoid picking up rows from nested tables.
+        result = []
+        for tfoot in table.find_all("tfoot", recursive=False):
+            result.extend(tfoot.find_all("tr", recursive=False))
+        return result
+
+    def _build_doc(self):
+        from bs4 import BeautifulSoup
+
+        bdoc = self._setup_build_doc()
+        if isinstance(bdoc, bytes) and self.encoding is not None:
+            udoc = bdoc.decode(self.encoding)
+            from_encoding = None
+        else:
+            udoc = bdoc
+            from_encoding = self.encoding
+
+        soup = BeautifulSoup(
+            udoc, features="html.parser", from_encoding=from_encoding
+        )
+
+        for br in soup.find_all("br"):
+            br.replace_with("\n" + br.text)
+
+        return soup
+
+
 def _build_xpath_expr(attrs) -> str:
     """
     Build an xpath expression to simulate bs4's ability to pass in kwargs to
@@ -877,6 +941,7 @@ _valid_parsers = {
     None: _LxmlFrameParser,
     "html5lib": _BeautifulSoupHtml5LibFrameParser,
     "bs4": _BeautifulSoupHtml5LibFrameParser,
+    "html.parser": _BeautifulSoupHtmlParserFrameParser,
 }
 
 
@@ -886,7 +951,7 @@ def _parser_dispatch(flavor: HTMLFlavors | None) -> type[_HtmlFrameParser]:
 
     Parameters
     ----------
-    flavor : {"lxml", "html5lib", "bs4"} or None
+    flavor : {"lxml", "html5lib", "bs4", "html.parser"} or None
         The type of parser to use. This must be a valid backend.
 
     Returns
@@ -909,6 +974,8 @@ def _parser_dispatch(flavor: HTMLFlavors | None) -> type[_HtmlFrameParser]:
 
     if flavor in ("bs4", "html5lib"):
         import_optional_dependency("html5lib")
+        import_optional_dependency("bs4")
+    elif flavor == "html.parser":
         import_optional_dependency("bs4")
     else:
         import_optional_dependency("lxml.etree")
@@ -1066,11 +1133,14 @@ def read_html(
         This value is converted to a regular expression so that there is
         consistent behavior between Beautiful Soup and lxml.
 
-    flavor : {"lxml", "html5lib", "bs4"} or list-like, optional
+    flavor : {"lxml", "html5lib", "bs4", "html.parser"} or list-like, optional
         The parsing engine (or list of parsing engines) to use. 'bs4' and
         'html5lib' are synonymous with each other, they are both there for
         backwards compatibility. The default of ``None`` tries to use ``lxml``
         to parse and if that fails it falls back on ``bs4`` + ``html5lib``.
+        'html.parser' uses Python's built-in HTML parser (via BeautifulSoup)
+        and correctly handles nested tables by only selecting rows that are
+        direct children of the immediate thead/tbody/tfoot section.
 
     header : int or list-like, optional
         The row (or list of rows for a :class:`~pandas.MultiIndex`) to use to

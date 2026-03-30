@@ -339,6 +339,15 @@ class TestPeriodIndex:
         result = idx_dup.intersection(idx_dup)
         tm.assert_index_equal(result, idx)
 
+    def test_difference_trailing_overlap(self):
+        # GH#58971 - Index.difference returning too many values when the
+        # subtracted range covers trailing elements of the original index
+        index1 = period_range("2022-01-01", "2022-01-10", freq="D")
+        index2 = period_range("2022-01-05", "2022-01-10", freq="D")
+        result = index1.difference(index2)
+        expected = period_range("2022-01-01", "2022-01-04", freq="D")
+        tm.assert_index_equal(result, expected)
+
     @pytest.mark.filterwarnings(r"ignore:PeriodDtype\[B\] is deprecated:FutureWarning")
     def test_union_duplicates(self):
         # GH#36289

@@ -512,6 +512,34 @@ class TestFloatIndexers:
         result = indexer_sl(s)[[2.5]]
         tm.assert_series_equal(result, Series([1], index=[2.5]))
 
+    def test_numpy_float_scalar_as_index_label(self):
+        # GH#57645 - numpy float64 scalars should work as index labels
+        # This was a regression in pandas 2.2.1 when Float64Index was replaced
+        # by a plain Index with float64 dtype.
+        s = Series([1, 2, 3], index=[np.float64(0.1), np.float64(0.2), np.float64(0.3)])
+
+        # Direct access with np.float64 scalar
+        assert s[np.float64(0.1)] == 1
+        assert s[np.float64(0.2)] == 2
+        assert s[np.float64(0.3)] == 3
+
+        # Access via .loc with np.float64 scalar
+        assert s.loc[np.float64(0.1)] == 1
+        assert s.loc[np.float64(0.2)] == 2
+
+        # Access with Python float should also work
+        assert s[0.1] == 1
+
+        # np.float32 scalars should also work
+        s2 = Series([1, 2, 3], index=[np.float32(0.1), np.float32(0.2), np.float32(0.3)])
+        # The index will be float32 dtype
+        result = s2[np.float32(0.1)]
+        assert result == 1
+
+        # Contains check should work with numpy float scalars
+        assert np.float64(0.1) in s
+        assert np.float64(0.5) not in s
+
     def test_floatindex_slicing_bug(self, float_numpy_dtype):
         # GH 5557, related to slicing a float index
         dtype = float_numpy_dtype

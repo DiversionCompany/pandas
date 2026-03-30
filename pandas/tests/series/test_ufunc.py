@@ -473,3 +473,24 @@ def test_np_trunc():
     result = np.trunc(ser)
     expected = pd.Series([-1.0, -0.0, 0.0, 1.0])
     tm.assert_series_equal(result, expected)
+
+
+@pytest.mark.parametrize("ufunc", [np.maximum, np.minimum, np.fmax, np.fmin])
+@pytest.mark.parametrize("scalar", [0, 2, -1])
+def test_np_maximum_with_scalar(ufunc, scalar):
+    # GH#60611: Regression - np.maximum(series, scalar) caused a segfault
+    a = [1, 2, 3]
+    s = pd.Series(a)
+    result = ufunc(s, scalar)
+    expected = pd.Series(ufunc(np.array(a), scalar))
+    tm.assert_series_equal(result, expected)
+
+
+@pytest.mark.parametrize("ufunc", [np.maximum, np.minimum])
+def test_np_maximum_with_series(ufunc):
+    # GH#60611: Regression - np.maximum(series, series) caused a segfault
+    s1 = pd.Series([1, 4, 3])
+    s2 = pd.Series([2, 2, 5])
+    result = ufunc(s1, s2)
+    expected = pd.Series(ufunc(s1.to_numpy(), s2.to_numpy()))
+    tm.assert_series_equal(result, expected)

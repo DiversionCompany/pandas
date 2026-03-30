@@ -7402,6 +7402,170 @@ class NDFrame(PandasObject, indexing.IndexingMixin):
         )
 
     @final
+    def nearest_time_fill(
+        self,
+        *,
+        axis: None | Axis = None,
+        inplace: bool = False,
+    ) -> Self:
+        """
+        Fill NA/NaN values using the nearest observation in time.
+
+        For each missing value, this method selects the non-missing value
+        whose index timestamp is closest (minimum absolute time difference).
+        When the forward and backward distances are equal, the forward-filled
+        (earlier) value is used.
+
+        This method requires a :class:`DatetimeIndex`.
+
+        Parameters
+        ----------
+        axis : {0 or 'index'} for Series, {0 or 'index', 1 or 'columns'} \
+for DataFrame
+            Axis along which to fill missing values. For `Series`
+            this parameter is unused and defaults to 0.
+        inplace : bool, default False
+            If True, fill in-place. Note: this will modify any
+            other views on this object (e.g., a no-copy slice for a column in a
+            DataFrame).
+
+        Returns
+        -------
+        Series/DataFrame
+            Object with missing values filled using the nearest time observation.
+
+        Raises
+        ------
+        TypeError
+            If the index is not a :class:`DatetimeIndex`.
+
+        See Also
+        --------
+        DataFrame.ffill : Fill NA/NaN values by propagating the last valid
+            observation to next valid.
+        DataFrame.bfill : Fill NA/NaN values by using the next valid observation
+            to fill the gap.
+        DataFrame.interpolate : Fill NaN values using interpolation.
+
+        Notes
+        -----
+        For time series with a :class:`DatetimeIndex`, ``nearest_time_fill``
+        chooses between a forward-filled and backward-filled value by computing
+        the absolute time difference from each NaN position to the nearest
+        valid neighbour. This is equivalent to::
+
+            s_ffill = s.ffill()
+            s_bfill = s.bfill()
+            # select s_ffill or s_bfill based on which neighbour is closer in time
+
+        Examples
+        --------
+        Fill missing values for a datetime-indexed Series:
+
+        >>> idx = pd.to_datetime(["2020-01-01", "2020-01-02", "2020-01-05",
+        ...                       "2020-01-06"])
+        >>> s = pd.Series([1.0, np.nan, np.nan, 4.0], index=idx)
+        >>> s
+        2020-01-01    1.0
+        2020-01-02    NaN
+        2020-01-05    NaN
+        2020-01-06    4.0
+        dtype: float64
+
+        >>> s.nearest_time_fill()
+        2020-01-01    1.0
+        2020-01-02    1.0
+        2020-01-05    4.0
+        2020-01-06    4.0
+        dtype: float64
+
+        The value on 2020-01-02 is filled with 1.0 (from 2020-01-01, distance
+        1 day) rather than 4.0 (from 2020-01-06, distance 4 days). The value
+        on 2020-01-05 is filled with 4.0 (from 2020-01-06, distance 1 day)
+        rather than 1.0 (from 2020-01-01, distance 4 days).
+        """
+        inplace = validate_bool_kwarg(inplace, "inplace")
+
+        if axis is None:
+            axis = 0
+        axis = self._get_axis_number(axis)
+
+        # Validate that the relevant axis has a DatetimeIndex
+        ax = self.axes[axis]
+        if not isinstance(ax, DatetimeIndex):
+            raise TypeError(
+                "nearest_time_fill requires a DatetimeIndex along the fill axis; "
+                f"got {type(ax).__name__!r}"
+            )
+
+        # Compute forward-filled and backward-filled versions
+        filled_forward = self._pad_or_backfill("ffill", axis=axis, inplace=False)
+        filled_backward = self._pad_or_backfill("bfill", axis=axis, inplace=False)
+
+        # Identify positions that were originally NaN
+        na_mask = self.isna()
+
+        if axis == 0:
+            idx_ns = ax.asi8  # nanoseconds since epoch as int64 array (1-D)
+            idx_ns_f = idx_ns.astype(np.float64)
+
+            from pandas import Series as _Series
+
+            if self.ndim == 1:
+                # 1-D case: single valid mask per row
+                valid_mask_1d = ~na_mask
+                idx_series = _Series(idx_ns, index=ax, dtype=np.int64)
+                fwd_src = idx_series.where(valid_mask_1d).ffill()
+                bwd_src = idx_series.where(valid_mask_1d).bfill()
+
+                fwd_dist = np.abs(
+                    idx_ns_f - fwd_src.to_numpy(dtype=np.float64, na_value=np.inf)
+                )
+                bwd_dist = np.abs(
+                    idx_ns_f - bwd_src.to_numpy(dtype=np.float64, na_value=np.inf)
+                )
+
+                # Use backward fill only where bwd is *strictly* closer
+                use_bfill_1d = bwd_dist < fwd_dist  # bool array, shape (n,)
+                result = filled_forward.copy()
+                apply_bfill = use_bfill_1d & na_mask.to_numpy()
+                result.iloc[apply_bfill] = filled_backward.iloc[apply_bfill]
+            else:
+                # DataFrame: each column may have its own valid-row pattern.
+                # Compute per-column fwd/bwd distance and build a 2-D use_bfill mask.
+                import pandas as _pd
+
+                use_bfill_2d = _pd.DataFrame(
+                    False, index=ax, columns=self.columns, dtype=bool
+                )
+                idx_series = _Series(idx_ns, index=ax, dtype=np.int64)
+                for col in self.columns:
+                    col_valid = ~na_mask[col]
+                    fwd_src = idx_series.where(col_valid).ffill()
+                    bwd_src = idx_series.where(col_valid).bfill()
+                    fwd_d = np.abs(
+                        idx_ns_f
+                        - fwd_src.to_numpy(dtype=np.float64, na_value=np.inf)
+                    )
+                    bwd_d = np.abs(
+                        idx_ns_f
+                        - bwd_src.to_numpy(dtype=np.float64, na_value=np.inf)
+                    )
+                    use_bfill_2d[col] = bwd_d < fwd_d
+
+                apply_bfill = use_bfill_2d & na_mask
+                result = filled_forward.copy()
+                result[apply_bfill] = filled_backward[apply_bfill]
+        else:
+            # axis=1: fill along columns, transpose and recurse
+            result = self.T.nearest_time_fill(axis=0).T
+
+        if inplace:
+            self._update_inplace(result)
+            return self
+        return result.__finalize__(self, method="nearest_time_fill")
+
+    @final
     def replace(
         self,
         to_replace=None,

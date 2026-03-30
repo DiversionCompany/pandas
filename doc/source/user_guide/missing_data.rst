@@ -409,6 +409,30 @@ Fill gaps forward or backward
    df.ffill()
    df.bfill()
 
+.. _missing_data.fillna.nearest_time:
+
+Fill gaps with the nearest observation in time
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+:meth:`Series.nearest_time_fill` and :meth:`DataFrame.nearest_time_fill` fill
+NA/NaN values with the non-missing observation whose timestamp is closest,
+regardless of whether it precedes or follows the missing value.  This requires
+a :class:`DatetimeIndex`.
+
+.. ipython:: python
+
+   idx = pd.to_datetime(
+       ["2020-01-01", "2020-01-02", "2020-01-05", "2020-01-06"]
+   )
+   ts = pd.Series([1.0, np.nan, np.nan, 4.0], index=idx)
+   ts
+   ts.nearest_time_fill()
+
+The value at ``2020-01-02`` is filled with ``1.0`` because ``2020-01-01`` is
+only 1 day away, whereas ``2020-01-06`` is 4 days away.  Conversely, the
+value at ``2020-01-05`` is filled with ``4.0`` because ``2020-01-06`` is 1 day
+away.
+
 .. _missing_data.fillna.limit:
 
 Limit the number of NA values filled

@@ -113,3 +113,24 @@ class TestIntervalIndexRendering:
             f"dtype='interval[datetime64[{unit}, UTC], right]')"
         )
         assert result == expected
+
+    def test_timestamp_always_shows_time_components(self):
+        # GH#57748: Interval repr should always show HH:MM:SS for Timestamps
+        # even when the time is midnight (00:00:00)
+        i = Interval(Timestamp("2020-01-01"), Timestamp("2020-01-02"))
+        # __str__ should always include time components
+        assert str(i) == "(2020-01-01 00:00:00, 2020-01-02 00:00:00]"
+        # __repr__ should always include time components
+        assert repr(i) == (
+            "Interval(2020-01-01 00:00:00, 2020-01-02 00:00:00, closed='right')"
+        )
+
+    def test_timestamp_with_time_always_shows_time_components(self):
+        # GH#57748: Interval repr for Timestamps with non-midnight time
+        i = Interval(
+            Timestamp("2020-01-01 12:30:00"), Timestamp("2020-01-02 18:45:00")
+        )
+        assert str(i) == "(2020-01-01 12:30:00, 2020-01-02 18:45:00]"
+        assert repr(i) == (
+            "Interval(2020-01-01 12:30:00, 2020-01-02 18:45:00, closed='right')"
+        )

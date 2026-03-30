@@ -190,7 +190,7 @@ Strings
 
 Interval
 ^^^^^^^^
--
+- Bug in :class:`Interval` where ``repr`` and ``str`` of an :class:`Interval` with :class:`Timestamp` endpoints did not always show the hour, minute, and second components (:issue:`57748`)
 -
 
 Indexing

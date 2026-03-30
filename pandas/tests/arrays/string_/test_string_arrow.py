@@ -113,6 +113,17 @@ def test_constructor_from_list():
     assert result.dtype.storage == "pyarrow"
 
 
+def test_from_sequence_with_nan():
+    # GH#64578: constructing ArrowStringArray from list containing np.nan
+    # should not raise ArrowTypeError
+    pytest.importorskip("pyarrow")
+    result = pd.array([np.nan, "hello", "world"], dtype="string[pyarrow]")
+    assert isinstance(result, ArrowStringArray)
+    assert result[0] is pd.NA
+    assert result[1] == "hello"
+    assert result[2] == "world"
+
+
 def test_from_sequence_wrong_dtype_raises(using_infer_string):
     pytest.importorskip("pyarrow")
     with pd.option_context("string_storage", "python"):

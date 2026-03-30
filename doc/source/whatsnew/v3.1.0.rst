@@ -185,7 +185,7 @@ Conversion
 
 Strings
 ^^^^^^^
--
+- Bug in :class:`~pandas.arrays.ArrowExtensionArray` where constructing a string array from a list containing ``np.nan`` values raised an ``ArrowTypeError`` (:issue:`64578`)
 -
 
 Interval

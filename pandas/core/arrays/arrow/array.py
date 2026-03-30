@@ -670,6 +670,12 @@ class ArrowExtensionArray(
                         #  means there were no scalar (NA) entries.
                         mask = np.zeros(len(value), dtype=np.bool_)
                     else:
+                        if arr_value.dtype.kind in "SU":
+                            # GH#64578: mixed list with NaN and strings produces a
+                            # Unicode array where NaN is coerced to 'nan', causing
+                            # isna() to miss NaN values.  Re-convert as object so
+                            # NaN is preserved as float nan for isna() detection.
+                            arr_value = np.asarray(value, dtype=object)
                         mask = isna(arr_value)
                 except ValueError:
                     # Ragged data that numpy raises on

@@ -3999,4 +3999,30 @@ def test_timestamp_reduction_consistency(unit, method):
     assert isinstance(result, pd.Timestamp), (
         f"{method} for {unit} returned {type(result)}"
     )
+
+
+@pytest.mark.parametrize(
+    "arrow_type",
+    [pa.large_string(), pa.string()],
+)
+def test_large_string_add_scalar(arrow_type):
+    # GH#64393 - adding a plain string to a pa.large_string-backed Series should work
+    ser = pd.Series(["hello", "world"], dtype=ArrowDtype(arrow_type))
+    result = ser + " suffix"
+    expected = pd.Series(["hello suffix", "world suffix"], dtype=ArrowDtype(arrow_type))
+    tm.assert_series_equal(result, expected)
+
+
+@pytest.mark.parametrize(
+    "arrow_type",
+    [pa.large_string(), pa.string()],
+)
+def test_large_string_radd_scalar(arrow_type):
+    # GH#64393 - reverse adding (prefix + large_string Series) should also work
+    ser = pd.Series(["hello", "world"], dtype=ArrowDtype(arrow_type))
+    result = "prefix " + ser
+    expected = pd.Series(
+        ["prefix hello", "prefix world"], dtype=ArrowDtype(arrow_type)
+    )
+    tm.assert_series_equal(result, expected)
     assert result.unit == unit

@@ -1002,6 +1002,20 @@ class ArrowExtensionArray(
         ):
             if op in [operator.add, roperator.radd]:
                 sep = pa.scalar("", type=pa_type)
+                # Cast other to pa_type to ensure type compatibility with
+                # binary_join_element_wise (e.g. large_string vs string).
+                # GH#64393
+                if isinstance(other, pa.Scalar) and other.type != pa_type:
+                    try:
+                        other = other.cast(pa_type)
+                    except pa.ArrowInvalid:
+                        pass
+                elif isinstance(other, (pa.Array, pa.ChunkedArray)):
+                    if other.type != pa_type:
+                        try:
+                            other = other.cast(pa_type)
+                        except pa.ArrowInvalid:
+                            pass
                 try:
                     if op is operator.add:
                         result = pc.binary_join_element_wise(self._pa_array, other, sep)

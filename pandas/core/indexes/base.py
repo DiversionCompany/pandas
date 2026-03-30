@@ -2885,6 +2885,13 @@ class Index(IndexOpsMixin, PandasObject):
         unique : Numpy array of unique values in that column.
         Series.unique : Return unique values of Series object.
 
+        Notes
+        -----
+        For object dtype, bool values (``True`` and ``False``) are not
+        distinguished from their integer equivalents (``1`` and ``0``). This
+        means that ``True`` and ``1`` (or ``False`` and ``0``) will be treated
+        as the same value and only one of them will appear in the result.
+
         Examples
         --------
         >>> idx = pd.Index([1, 1, 2, 3, 3])

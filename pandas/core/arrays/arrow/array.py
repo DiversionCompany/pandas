@@ -757,8 +757,7 @@ class ArrowExtensionArray(
                     isinstance(self._dtype, StringDtype)
                     and self._dtype.storage == "pyarrow"
                 ):
-                    # TODO(infer_string) should this be large_string?
-                    pa_dtype = pa.string()
+                    pa_dtype = pa.large_string()
                 else:
                     pa_dtype = self._dtype.pyarrow_dtype
                 result = pa.chunked_array([], type=pa_dtype)

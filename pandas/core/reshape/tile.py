@@ -404,7 +404,14 @@ def _nbins_to_bins(x_idx: Index, nbins: int, right: bool) -> Index:
     if x_idx.size == 0:
         raise ValueError("Cannot cut empty array")
 
-    rng = (x_idx.min(), x_idx.max())
+    # GH#55684: drop NaN values before computing min/max so that an input
+    # Series containing NaN values does not produce all-NaN bin edges.
+    x_idx_notna = x_idx[~isna(x_idx)]
+
+    if x_idx_notna.size == 0:
+        raise ValueError("Cannot cut array with all NaN values")
+
+    rng = (x_idx_notna.min(), x_idx_notna.max())
     mn, mx = rng
 
     if is_numeric_dtype(x_idx.dtype) and (np.isinf(mn) or np.isinf(mx)):  # type: ignore[call-overload]

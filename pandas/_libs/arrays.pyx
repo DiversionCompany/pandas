@@ -77,6 +77,14 @@ cdef class NDArrayBacked:
         # TODO: reuse simple_new if/when it can be cpdef
         cdef:
             NDArrayBacked obj
+        if values is None:
+            # GH#60611: Guard against NULL/None from C API calls (e.g.
+            # PyArray_Transpose, PyArray_Ravel, PyArray_Concatenate returning
+            # NULL on error), which could lead to a segfault later when
+            # PyArray_DIMS is called on a NULL pointer.
+            raise ValueError(
+                "_from_backing_data: values must be a valid ndarray, got None"
+            )
         obj = NDArrayBacked.__new__(type(self))
         obj._ndarray = values
         obj._dtype = self._dtype
@@ -121,6 +129,11 @@ cdef class NDArrayBacked:
             raise NotImplementedError(state)  # pragma: no cover
 
     def __len__(self) -> int:
+        # GH#60611: PyArray_DIMS returns a pointer to dims array; for a 0-d
+        # array the dims array has 0 elements, so [0] would be out of bounds
+        # and could segfault. Guard against this by checking ndim first.
+        if cnp.PyArray_NDIM(self._ndarray) == 0:
+            raise TypeError("len() of unsized object")
         return cnp.PyArray_DIMS(self._ndarray)[0]
 
     @property

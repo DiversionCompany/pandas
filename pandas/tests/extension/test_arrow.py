@@ -3694,6 +3694,14 @@ def test_map_numeric_na_action(using_nan_is_na):
     tm.assert_series_equal(result, expected)
 
 
+def test_map_numeric_na_identity():
+    # GH#57390: pd.NA identity check should work in map() for arrow numeric dtypes
+    ser = pd.Series([pd.NA], dtype="int64[pyarrow]")
+    result = ser.map(lambda x: 1 if x is pd.NA else 2)
+    expected = pd.Series([1], dtype="int64[pyarrow]")
+    tm.assert_series_equal(result, expected)
+
+
 def test_categorical_from_arrow_dictionary():
     # GH 60563
     df = pd.DataFrame(

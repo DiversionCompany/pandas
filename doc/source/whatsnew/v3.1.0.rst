@@ -250,7 +250,7 @@ Sparse
 ExtensionArray
 ^^^^^^^^^^^^^^
 - Fixed bug in :meth:`Series.apply` and :meth:`Series.map` where nullable integer dtypes were converted to float, causing precision loss for large integers; now the nullable dtype will be preserved (:issue:`63903`).
--
+- Fixed bug in :meth:`Series.map` where ``pd.NA`` identity checks (``x is pd.NA``) failed inside user-supplied functions for :class:`ArrowDtype` numeric dtypes because ``pd.NA`` was passed as ``np.nan`` (:issue:`57390`).
 -
 
 Styler

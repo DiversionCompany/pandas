@@ -362,6 +362,12 @@ class Index(IndexOpsMixin, PandasObject):
     An Index instance can **only** contain hashable objects.
     An Index instance *can not* hold numpy float16 dtype.
 
+    When constructing an :class:`Index` from a Python list, dtype is inferred
+    (e.g., a list of integers defaults to ``int64``). When constructing from a
+    NumPy array, the array's dtype is preserved (e.g., a ``uint8`` NumPy array
+    yields a ``uint8`` Index). To explicitly control the output dtype, pass the
+    ``dtype`` parameter.
+
     Examples
     --------
     >>> pd.Index([1, 2, 3])
@@ -372,6 +378,15 @@ class Index(IndexOpsMixin, PandasObject):
 
     >>> pd.Index([1, 2, 3], dtype="uint8")
     Index([1, 2, 3], dtype='uint8')
+
+    When passing a NumPy array, the array's dtype is preserved:
+
+    >>> import numpy as np
+    >>> pd.Index(np.array([1, 2, 3], dtype=np.uint8))
+    Index([1, 2, 3], dtype='uint8')
+
+    >>> pd.Index(np.array([1, 2, 3], dtype=np.int32))
+    Index([1, 2, 3], dtype='int32')
     """
 
     # similar to __array_priority__, positions Index after Series and DataFrame

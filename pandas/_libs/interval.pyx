@@ -527,16 +527,29 @@ cdef class Interval(IntervalMixin):
         args = (self.left, self.right, self.closed)
         return (type(self), args)
 
+    def _endpoint_repr(self, endpoint) -> str:
+        # GH#57748: For Timestamps, always include HH:MM:SS components to
+        # avoid ambiguity. Use isoformat with space separator to get a
+        # consistent format that includes timezone offset when present.
+        if isinstance(endpoint, _Timestamp):
+            return endpoint.isoformat(sep=" ")
+        elif isinstance(endpoint, (_Timedelta, np.generic)):
+            return str(endpoint)
+        return repr(endpoint)
+
     def __repr__(self) -> str:
-        disp = str if isinstance(self.left, (np.generic, _Timestamp)) else repr
+        left = self._endpoint_repr(self.left)
+        right = self._endpoint_repr(self.right)
         name = type(self).__name__
-        repr_str = f"{name}({disp(self.left)}, {disp(self.right)}, closed={repr(self.closed)})"  # noqa: E501
+        repr_str = f"{name}({left}, {right}, closed={repr(self.closed)})"
         return repr_str
 
     def __str__(self) -> str:
         start_symbol = "[" if self.closed_left else "("
         end_symbol = "]" if self.closed_right else ")"
-        return f"{start_symbol}{self.left}, {self.right}{end_symbol}"
+        left = self._endpoint_repr(self.left)
+        right = self._endpoint_repr(self.right)
+        return f"{start_symbol}{left}, {right}{end_symbol}"
 
     def __add__(self, y):
         if (

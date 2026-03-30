@@ -80,10 +80,30 @@ class TestReadPyTablesHDF5:
         tm.assert_frame_equal(result, expected, check_index_type=True)
 
 
-_legacy_files = list(Path(__file__).parent.parent.glob("data/legacy_hdf/*/*.h5"))
+def _collect_legacy_hdf_files(config=None):
+    """
+    Return a list of legacy HDF5 files to test.
+
+    Uses the ``--legacy-data-dir`` option (if supplied) to look for files in a
+    custom directory, falling back to the default location inside
+    ``pandas/tests/io/data/legacy_hdf/``.
+    """
+    default_dir = Path(__file__).parent.parent / "data" / "legacy_hdf"
+    if config is not None:
+        legacy_data_dir = config.getoption("--legacy-data-dir", default=None)
+        if legacy_data_dir is not None:
+            custom_dir = Path(legacy_data_dir) / "legacy_hdf"
+            if custom_dir.exists():
+                return list(custom_dir.glob("*/*.h5"))
+    return list(default_dir.glob("*/*.h5"))
 
 
-@pytest.mark.parametrize("legacy_file", _legacy_files, ids=lambda x: x.name)
+def pytest_generate_tests(metafunc):
+    if "legacy_file" in metafunc.fixturenames:
+        legacy_files = _collect_legacy_hdf_files(metafunc.config)
+        metafunc.parametrize("legacy_file", legacy_files, ids=lambda x: x.name)
+
+
 def test_legacy_files(datapath, legacy_file, using_infer_string, request):
     legacy_version = Version(legacy_file.parent.name)
     legacy_file = datapath(legacy_file)

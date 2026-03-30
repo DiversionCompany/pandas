@@ -15680,7 +15680,15 @@ class DataFrame(NDFrame, OpsMixin):
         out.name = None
         if out_dtype is not None and out.dtype != "boolean":
             out = out.astype(out_dtype)
-        elif (df._mgr.get_dtypes() == object).any() and name not in ["any", "all"]:
+        elif (df._mgr.get_dtypes() == object).any() and name not in [
+            "any",
+            "all",
+            # GH#55194: var/std/sem always produce numeric (float) results;
+            # do not cast to object even when input has mixed/object dtype.
+            "var",
+            "std",
+            "sem",
+        ]:
             out = out.astype(object)
         elif len(self) == 0 and out.dtype == object and name in ("sum", "prod"):
             # Even if we are object dtype, follow numpy and return

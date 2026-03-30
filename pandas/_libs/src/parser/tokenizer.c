@@ -418,8 +418,8 @@ static int end_line(parser_t *self) {
     return 0;
   }
 
-  if (!(self->lines <= self->header_end + 1) && (fields > ex_fields) &&
-      !(self->usecols)) {
+  if (!(self->lines <= self->header_end) && ex_fields > 0 &&
+      (fields > ex_fields) && !(self->usecols)) {
     // increment file line count
     self->file_lines++;
 
@@ -1710,12 +1710,10 @@ int64_t str_to_int64(const char *p_item, int *error, char tsep) {
     return 0;
   }
 
-  // Skip trailing spaces.
-  while (isspace_ascii(*endptr)) {
-    ++endptr;
-  }
-
   // Did we use up all the characters?
+  // Note: trailing whitespace is NOT skipped here; a field like "1 " (with
+  // trailing space) should fail integer conversion and fall back to float.
+  // See GH#64655.
   if (*endptr) {
     *error = ERROR_INVALID_CHARS;
     return 0;
@@ -1770,12 +1768,10 @@ uint64_t str_to_uint64(uint_state *state, const char *p_item, int *error,
     return 0;
   }
 
-  // Skip trailing spaces.
-  while (isspace_ascii(*endptr)) {
-    ++endptr;
-  }
-
   // Did we use up all the characters?
+  // Note: trailing whitespace is NOT skipped here; a field like "1 " (with
+  // trailing space) should fail integer conversion and fall back to float.
+  // See GH#64655.
   if (*endptr) {
     *error = ERROR_INVALID_CHARS;
     return 0;

@@ -20,6 +20,7 @@ import pytest
 
 from pandas.compat import WASM
 from pandas.errors import (
+    ParserError,
     ParserWarning,
 )
 import pandas.util._test_decorators as td
@@ -59,6 +60,16 @@ def test_cr_in_field_with_trailing_space(c_parser_only):
     result = parser.read_csv(StringIO(data))
     assert len(result) == 3
     assert result.shape == (3, 3)
+
+
+def test_first_data_line_extra_fields_raises(c_parser_only):
+    # GH#64655 - C engine should raise ParserError when the first data line
+    # has more fields than the header, rather than silently converting the
+    # value to an integer. This ensures consistency with the Python engine.
+    parser = c_parser_only
+    csv_data = "col\n1 ,\n"
+    with pytest.raises(ParserError, match="Expected 1 fields in line 2, saw 2"):
+        parser.read_csv(StringIO(csv_data))
 
 
 def test_delim_whitespace_custom_terminator(c_parser_only):
@@ -672,3 +683,24 @@ def test_float_precision_options(c_parser_only):
 
     with pytest.raises(ValueError, match=msg):
         parser.read_csv(StringIO(s), float_precision="junk")
+
+
+def test_number_with_trailing_space_not_integer(c_parser_only):
+    # GH#64655 - C engine should not convert "1 " (number followed by space)
+    # to integer; it should fall back to float or string.
+    parser = c_parser_only
+
+    # "1 ," - field value is "1 " (trailing space before delimiter)
+    txt1 = "a\n1 ,\n"
+    result1 = parser.read_csv(StringIO(txt1))
+    # The index "1 " should NOT be integer dtype; it should be float or object.
+    assert result1.index.dtype != np.dtype("int64"), (
+        "Index '1 ' (with trailing space) should not be integer"
+    )
+
+    # "1 ,0" - first field "1 " (trailing space) used as implicit index
+    txt2 = "a\n1 ,0"
+    result2 = parser.read_csv(StringIO(txt2))
+    assert result2.index.dtype != np.dtype("int64"), (
+        "Index '1 ' (with trailing space) should not be integer"
+    )

@@ -1320,7 +1320,7 @@ cdef class _Timedelta(timedelta):
         # NB: using the python C-API PyDateTime_DELTA_GET_SECONDS will fail
         #  (or be incorrect)
         self._ensure_components()
-        return self._h * 3600 + self._m * 60 + self._s
+        return self._seconds
 
     @property
     def microseconds(self) -> int:  # TODO(cython3): make cdef property
@@ -1358,7 +1358,7 @@ cdef class _Timedelta(timedelta):
         42
         """
         self._ensure_components()
-        return self._ms * 1000 + self._us
+        return self._microseconds
 
     def total_seconds(self) -> float:
         """

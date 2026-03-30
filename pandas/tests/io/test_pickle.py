@@ -77,15 +77,33 @@ def compare_element(result, expected, typ):
 # ---------------------
 
 
-def test_pickles(datapath):
+def _get_legacy_pickle_dir(config=None):
+    """
+    Return the directory containing legacy pickle files.
+
+    Checks ``--legacy-data-dir`` CLI option first; falls back to the default
+    location inside ``pandas/tests/io/data/legacy_pickle/``.
+    """
+    if config is not None:
+        legacy_data_dir = config.getoption("--legacy-data-dir", default=None)
+        if legacy_data_dir is not None:
+            custom_dir = Path(legacy_data_dir) / "legacy_pickle"
+            if custom_dir.exists():
+                return custom_dir
+    return Path(__file__).parent / "data" / "legacy_pickle"
+
+
+def test_pickles(datapath, pytestconfig):
     pytest.importorskip("pytz")
     if not is_platform_little_endian():
         pytest.skip("known failure on non-little endian")
 
     current_data = create_pickle_data()
 
+    legacy_pickle_dir = _get_legacy_pickle_dir(pytestconfig)
+
     # For loop for compat with --strict-data-files
-    for legacy_pickle in Path(__file__).parent.glob("data/legacy_pickle/*/*.p*kl*"):
+    for legacy_pickle in legacy_pickle_dir.glob("*/*.p*kl*"):
         legacy_version = Version(legacy_pickle.parent.name)
         legacy_pickle = datapath(legacy_pickle)
 

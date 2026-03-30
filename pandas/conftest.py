@@ -107,6 +107,16 @@ def pytest_addoption(parser) -> None:
         action="store_false",
         help="Don't fail if a test is skipped for missing data file.",
     )
+    parser.addoption(
+        "--legacy-data-dir",
+        action="store",
+        default=None,
+        help=(
+            "Path to a directory containing legacy test data files "
+            "(e.g. legacy_pickle/ and legacy_hdf/ subdirectories). "
+            "If not specified, the default location inside pandas/tests/ is used."
+        ),
+    )
 
 
 def pytest_sessionstart(session):
@@ -1161,7 +1171,16 @@ def strict_data_files(pytestconfig):
 
 
 @pytest.fixture
-def datapath(strict_data_files: str) -> Callable[..., str]:
+def legacy_data_dir(pytestconfig):
+    """
+    Returns the path to the legacy data directory specified via --legacy-data-dir,
+    or None if not set (in which case the default location inside pandas/tests/ is used).
+    """
+    return pytestconfig.getoption("--legacy-data-dir")
+
+
+@pytest.fixture
+def datapath(strict_data_files: str, legacy_data_dir: str | None) -> Callable[..., str]:
     """
     Get the path to a data file.
 
@@ -1178,11 +1197,34 @@ def datapath(strict_data_files: str) -> Callable[..., str]:
     ------
     ValueError
         If the path doesn't exist and the --no-strict-data-files option is not set.
+
+    Notes
+    -----
+    If ``--legacy-data-dir`` is provided on the command line, files under
+    ``io/data/legacy_pickle/`` or ``io/data/legacy_hdf/`` will be looked up
+    in that directory first before falling back to the default location.
     """
     BASE_PATH = os.path.join(os.path.dirname(__file__), "tests")
 
     def deco(*args):
         path = os.path.join(BASE_PATH, *args)
+        # If a legacy-data-dir is specified and the default path does not exist,
+        # try to find the file relative to the legacy data directory instead.
+        if legacy_data_dir is not None and not os.path.exists(path):
+            # Reconstruct a candidate path under the custom legacy data dir.
+            # The args may be an absolute Path or a sequence of path components;
+            # we check whether any leading component names match known legacy dirs.
+            joined_args = os.path.join(*args) if args else ""
+            # Normalise to a string so we can do substring checks.
+            joined_str = os.fspath(joined_args)
+            for legacy_subdir in ("legacy_pickle", "legacy_hdf"):
+                if legacy_subdir in joined_str:
+                    # Extract the portion of the path starting from the legacy subdir.
+                    idx = joined_str.find(legacy_subdir)
+                    rel = joined_str[idx:]
+                    candidate = os.path.join(legacy_data_dir, rel)
+                    if os.path.exists(candidate):
+                        return candidate
         if not os.path.exists(path):
             if strict_data_files:
                 raise ValueError(

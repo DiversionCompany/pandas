@@ -69,6 +69,7 @@ from pandas.core.dtypes.dtypes import (
     CategoricalDtype,
     DatetimeTZDtype,
     ExtensionDtype,
+    IntervalDtype,
     PeriodDtype,
 )
 from pandas.core.dtypes.missing import array_equivalent
@@ -77,6 +78,7 @@ from pandas import (
     DataFrame,
     DatetimeIndex,
     Index,
+    IntervalIndex,
     MultiIndex,
     PeriodIndex,
     RangeIndex,
@@ -2991,7 +2993,11 @@ class Fixed:
 class GenericFixed(Fixed):
     """a generified fixed version"""
 
-    _index_type_map = {DatetimeIndex: "datetime", PeriodIndex: "period"}
+    _index_type_map = {
+        DatetimeIndex: "datetime",
+        PeriodIndex: "period",
+        IntervalIndex: "interval",
+    }
     _reverse_index_map = {v: k for k, v in _index_type_map.items()}
     attributes: list[str] = []
 
@@ -3030,6 +3036,12 @@ class GenericFixed(Fixed):
                 dtype = PeriodDtype(freq)
                 parr = PeriodArray._simple_new(values, dtype=dtype)
                 return PeriodIndex._simple_new(parr, name=None)
+
+            factory = f
+        elif index_class == IntervalIndex:
+            # GH#38305 - reconstruct IntervalIndex from object array
+            def f(values, **kwargs2):  # type: ignore[misc]
+                return IntervalIndex(values)
 
             factory = f
         else:
@@ -3094,7 +3106,10 @@ class GenericFixed(Fixed):
         if isinstance(node, tables.VLArray):
             ret = node[0][start:stop]
             dtype = getattr(attrs, "value_type", None)
-            if dtype is not None:
+            if dtype == "interval":
+                # GH#38305 - stored as object array of Interval objects
+                ret = IntervalIndex(ret).values
+            elif dtype is not None:
                 ret = pd_array(ret, dtype=dtype)
         else:
             dtype = getattr(attrs, "value_type", None)
@@ -3154,7 +3169,7 @@ class GenericFixed(Fixed):
             node._v_attrs.kind = converted.kind
             node._v_attrs.name = index.name
 
-            if isinstance(index, (DatetimeIndex, PeriodIndex)):
+            if isinstance(index, (DatetimeIndex, PeriodIndex, IntervalIndex)):
                 node._v_attrs.index_class = self._class_to_alias(type(index))
 
             if isinstance(index, (DatetimeIndex, PeriodIndex, TimedeltaIndex)):
@@ -3297,6 +3312,20 @@ class GenericFixed(Fixed):
                 "Cannot store a category dtype in an HDF5 dataset that uses format="
                 '"fixed". Use format="table".'
             )
+
+        if isinstance(value.dtype, IntervalDtype):
+            # GH#38305 - IntervalDtype is not supported by PyTables.
+            # Convert to an object array of Interval objects so that the data
+            # can be round-tripped. The value_type attribute stores the
+            # original dtype so read_array can reconstruct an IntervalArray.
+            value = np.asarray(value, dtype=object)
+            vlarr = self._handle.create_vlarray(self.group, key, _tables().ObjectAtom())
+            vlarr.append(value)
+            node = getattr(self.group, key)
+            node._v_attrs.value_type = "interval"
+            node._v_attrs.transposed = False
+            return
+
         if not empty_array:
             if hasattr(value, "T"):
                 # ExtensionArrays (1d) may not have transpose.
@@ -5140,6 +5169,16 @@ def _convert_index(name: str, index: Index, encoding: str, errors: str) -> Index
     assert isinstance(name, str)
 
     index_name = index.name
+
+    if isinstance(index, IntervalIndex):
+        # GH#38305 - IntervalIndex dtype is not supported by PyTables.
+        # Store as an object array of Interval objects so the data can be
+        # round-tripped. On read, pandas reconstructs an IntervalIndex from
+        # the object array.
+        converted = np.asarray(index, dtype=object)
+        atom = _tables().ObjectAtom()
+        return IndexCol(name, converted, "object", atom, index_name=index_name)
+
     # error: Argument 1 to "_get_data_and_dtype_name" has incompatible type "Index";
     # expected "Union[ExtensionArray, ndarray]"
     converted, dtype_name = _get_data_and_dtype_name(index)  # type: ignore[arg-type]

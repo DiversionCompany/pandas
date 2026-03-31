@@ -1008,6 +1008,53 @@ class TestGroupBy:
         assert result.index.tz is not None
         assert str(result.index.tz) == "UTC"
 
+    def test_groupby_tz_aware_index_result_index(self):
+        # GH#57192 - regression: groupby on a DataFrame whose index is a
+        # tz-aware DatetimeIndex should preserve the timezone in the result.
+        idx = DatetimeIndex(
+            ["2020-01-01", "2020-01-01", "2020-01-02", "2020-01-02"],
+            tz="UTC",
+        )
+        df = DataFrame({"value": [1, 2, 3, 4]}, index=idx)
+
+        # groupby the index directly
+        result = df.groupby(df.index)["value"].sum()
+        expected_index = DatetimeIndex(["2020-01-01", "2020-01-02"], tz="UTC")
+        expected = Series([3, 7], index=expected_index, name="value")
+        tm.assert_series_equal(result, expected)
+
+        assert isinstance(result.index, DatetimeIndex)
+        assert result.index.tz is not None
+        assert str(result.index.tz) == "UTC"
+
+        # groupby via level=0
+        result2 = df.groupby(level=0)["value"].sum()
+        expected2 = Series([3, 7], index=expected_index, name="value")
+        tm.assert_series_equal(result2, expected2)
+
+        assert isinstance(result2.index, DatetimeIndex)
+        assert result2.index.tz is not None
+
+    def test_groupby_tz_aware_non_nano_resolution(self):
+        # GH#57192 - verify that non-nanosecond resolution tz-aware datetime
+        # columns also preserve timezone in the result index.
+        group_col = DatetimeIndex(
+            ["2020-01-01", "2020-01-01", "2020-01-02", "2020-01-02"],
+            tz="US/Pacific",
+        ).astype("datetime64[us, US/Pacific]")
+        df = DataFrame({"value": [10, 20, 30, 40], "group": group_col})
+        result = df.groupby("group")["value"].sum()
+
+        expected_index = DatetimeIndex(
+            ["2020-01-01", "2020-01-02"], tz="US/Pacific", name="group"
+        ).astype("datetime64[us, US/Pacific]")
+        expected = Series([30, 70], index=expected_index, name="value")
+        tm.assert_series_equal(result, expected)
+
+        assert isinstance(result.index, DatetimeIndex)
+        assert result.index.tz is not None
+        assert str(result.index.tz) == "US/Pacific"
+
     def test_groupby_tz_aware_column_multiple_timezones(self):
         # GH#57192 - verify that different timezones are preserved in result index
         df = DataFrame(

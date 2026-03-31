@@ -1002,6 +1002,10 @@ def stack_v3(frame: DataFrame, level: list[int]) -> Series | DataFrame:
         index_levels = frame.index.levels
         index_codes = list(np.tile(frame.index.codes, (1, ratio)))
     else:
+        # GH#56582, GH#57152 - use use_na_sentinel=False so that NA values
+        # (including NaT) are included in uniques and assigned valid codes
+        # rather than being assigned -1, which would cause data misalignment
+        # when constructing the MultiIndex.
         codes, uniques = factorize(frame.index, use_na_sentinel=False)
         index_levels = [uniques]
         index_codes = list(np.tile(codes, (1, ratio)))

@@ -159,6 +159,39 @@ def test_from_sequence_with_nan():
     assert result[2] == "world"
 
 
+def test_from_sequence_with_nan_various_na_types():
+    # GH#64578: constructing ArrowStringArray from list containing various
+    # NA-like values (np.nan, None, pd.NA) should not raise ArrowTypeError
+    # and should correctly represent them as missing values
+    pa = pytest.importorskip("pyarrow")
+    from pandas.core.arrays import ArrowExtensionArray
+
+    # Test with np.nan in middle position
+    result_nan = pd.array(["a", np.nan, "c"], dtype="string[pyarrow]")
+    assert pd.isna(result_nan[1])
+    assert result_nan[0] == "a"
+    assert result_nan[2] == "c"
+
+    # Test with None
+    result_none = pd.array([None, "hello"], dtype="string[pyarrow]")
+    assert pd.isna(result_none[0])
+    assert result_none[1] == "hello"
+
+    # Test with pd.NA
+    result_pdna = pd.array([pd.NA, "world"], dtype="string[pyarrow]")
+    assert pd.isna(result_pdna[0])
+    assert result_pdna[1] == "world"
+
+    # Test with ArrowExtensionArray directly using ArrowDtype
+    import pyarrow as pa_mod
+    from pandas import ArrowDtype
+    result_arrow = pd.array([np.nan, "test", None], dtype=ArrowDtype(pa_mod.string()))
+    assert isinstance(result_arrow, ArrowExtensionArray)
+    assert pd.isna(result_arrow[0])
+    assert result_arrow[1] == "test"
+    assert pd.isna(result_arrow[2])
+
+
 def test_from_sequence_wrong_dtype_raises(using_infer_string):
     pytest.importorskip("pyarrow")
     with pd.option_context("string_storage", "python"):

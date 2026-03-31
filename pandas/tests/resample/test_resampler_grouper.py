@@ -698,3 +698,19 @@ def test_resample_groupby_agg_as_index_false():
         result_func["b"].reset_index(drop=True),
         check_names=False,
     )
+
+
+@pytest.mark.parametrize("agg_func", ["min", "max", "sum", "mean"])
+def test_resample_groupby_agg_as_index_false_various_funcs(agg_func):
+    # GH#52397: dict-like agg should work for various aggregation functions
+    df = DataFrame(
+        {
+            "a": np.repeat([0, 1, 2], 4),
+            "b": range(12),
+        },
+        index=pd.date_range(start="2023-01-01", freq="1min", periods=12),
+    )
+    # Should not raise ValueError
+    result = df.groupby("a", as_index=False).resample("2min").agg({"b": agg_func})
+    assert "b" in result.columns
+    assert len(result) > 0

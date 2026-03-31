@@ -242,6 +242,7 @@ MultiIndex
 
 I/O
 ^^^
+- Bug in :func:`read_excel` where specifying ``usecols`` to select a subset of columns would mangle column names (appending ``.N`` suffixes) when duplicate column names existed in *unselected* columns (:issue:`64198`)
 - Bug in :func:`read_csv` (and related parsers) where the string ``"None"`` was incorrectly treated as a missing value by default, restoring pandas 1.x behavior; users who want ``"None"`` to be treated as NaN should pass ``na_values=["None"]`` explicitly (:issue:`52493`)
 - Bug in :meth:`DataFrame.to_sql` where user-registered ``sqlite3`` converters for ``"date"`` and ``"timestamp"`` types were overridden when writing to a SQLite database (:issue:`64337`)
 - Bug in :func:`read_sql` and :func:`read_sql_query` where DBAPI2 cursors using a dict-based row factory (e.g. ``pymysql`` with ``DictCursor``) returned incorrect or missing values (or duplicated column names in cells) because rows returned as dicts were not handled correctly (:issue:`52437`, :issue:`53028`)

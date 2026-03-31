@@ -590,6 +590,9 @@ class PythonParser(ParserBase):
                 header = [header]
 
             columns: list[list[Scalar | None]] = []
+            # GH#64198: Will hold pre-dedup column names for the first
+            # (non-MI) header level, used to re-dedup after usecols filtering.
+            _first_level_orig_columns: list[Scalar | None] | None = None
             for level, hr in enumerate(header):
                 try:
                     line = self._buffered_line()
@@ -639,6 +642,14 @@ class PythonParser(ParserBase):
                         this_columns.append(c)
 
                 if not have_mi_columns:
+                    # GH#64198: Save original column names before dedup so
+                    # that when usecols selects a subset, we can re-dedup only
+                    # the selected columns (avoiding spurious ".N" suffixes from
+                    # duplicates that exist in unselected columns).
+                    this_columns_orig = list(this_columns)
+                    if level == 0:
+                        _first_level_orig_columns = this_columns_orig
+
                     counts: DefaultDict = defaultdict(int)
                     # Ensure that regular columns are used before unnamed ones
                     # to keep given names and mangle unnamed columns
@@ -731,6 +742,29 @@ class PythonParser(ParserBase):
                 columns = self._handle_usecols(
                     columns, columns[0], num_original_columns
                 )
+                # GH#64198: When usecols selects a subset of columns, the
+                # dedup above may have mangled names of selected columns due to
+                # duplicates in *unselected* columns. Re-build the selected
+                # columns from original (pre-dedup) names and re-dedup only
+                # those, so that only true duplicates among selected columns
+                # receive a ".N" suffix.
+                if (
+                    self.usecols is not None
+                    and self._col_indices is not None
+                    and _first_level_orig_columns is not None
+                    and not have_mi_columns
+                    and len(columns) == 1
+                ):
+                    selected_orig = [
+                        _first_level_orig_columns[i]
+                        for i in self._col_indices
+                        if i < len(_first_level_orig_columns)
+                    ]
+                    rededuped = dedup_names(
+                        selected_orig,
+                        is_potential_multi_index(selected_orig, self.index_col),
+                    )
+                    columns = [rededuped]
         else:
             ncols = len(self._header_line)
             num_original_columns = ncols

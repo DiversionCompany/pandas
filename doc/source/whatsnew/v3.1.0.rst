@@ -271,6 +271,7 @@ I/O
 - Fixed :func:`read_json` with ``orient='table'`` raising ``TypeError`` when reading JSON produced by pandas 1.x with timezone-aware datetime strings (e.g. ending in ``'Z'``) for datetime columns without an explicit timezone in the schema (:issue:`52595`)
 - Bug in :func:`read_html` with ``flavor="bs4"`` or ``flavor="html5lib"`` where a nested table's header row was incorrectly included as a data row when using ``attrs`` to select the inner table (:issue:`64524`)
 - Added ``--legacy-data-dir`` pytest CLI option to allow specifying the location of legacy HDF5 and pickle test files (e.g. when running tests against an installed wheel); tests that require legacy data files are now skipped gracefully instead of producing an ``Empty parameter set`` error when the files are not found (:issue:`64604`)
+- Bug where :func:`read_parquet` with ``engine="fastparquet"`` discarded index values (returning ``None`` instead of the original labels) when the DataFrame was written with a non-default (named) index; this was caused by fastparquet relying on in-place mutation of a NumPy array after passing it to :class:`Index`, which pandas 3.0's Copy-on-Write semantics no longer support (:issue:`64298`)
 
 Period
 ^^^^^^

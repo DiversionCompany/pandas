@@ -1379,6 +1379,22 @@ class TestParquetFastParquet(Base):
         expected = df.copy()
         check_round_trip(df, temp_file, fp, expected=expected)
 
+    def test_roundtrip_index_preserved(self, fp, temp_file):
+        # GH#64298: index values must survive a parquet round-trip via fastparquet
+        # when the DataFrame was created with from_dict (string row labels).
+        import io
+
+        df = pd.DataFrame.from_dict({"a": {"c": 1.0}, "b": {"d": "george"}})
+        assert list(df.index) == ["c", "d"]
+
+        parq_bytes = df.to_parquet(compression=None, index=True, engine="fastparquet")
+        df_read = pd.read_parquet(io.BytesIO(parq_bytes), engine="fastparquet")
+
+        # The index should still be ["c", "d"] after the round-trip
+        expected = df.copy()
+        expected.index.name = "index"
+        tm.assert_frame_equal(df_read, expected)
+
     def test_timezone_aware_index(
         self, fp, timezone_aware_date_list, request, temp_file
     ):

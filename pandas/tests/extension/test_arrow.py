@@ -1805,9 +1805,33 @@ def test_str_contains_python_unicode_escape_8digit():
 
 def test_str_match_python_unicode_escape():
     # GH 63901 - Python-style \uXXXX escapes should work with str.match too
-    ser = pd.Series(["\u0e01abc", "abc", None], dtype=ArrowDtype(pa.string()))
-    result = ser.str.match(r"[\u0e00-\u0e7f]")
-    expected = pd.Series([True, False, None], dtype=ArrowDtype(pa.bool_()))
+    ser = pd.Series(["a", "\u0e01xyz", None], dtype=ArrowDtype(pa.string()))
+    result = ser.str.match(r"\u0e0[0-9]")
+    expected = pd.Series([False, True, None], dtype=ArrowDtype(pa.bool_()))
+    tm.assert_series_equal(result, expected)
+
+
+def test_str_fullmatch_python_unicode_escape():
+    # GH 63901 - Python-style \uXXXX escapes should work with str.fullmatch too
+    ser = pd.Series(["a", "\u0e01", None], dtype=ArrowDtype(pa.string()))
+    result = ser.str.fullmatch(r"\u0e0[0-9]")
+    expected = pd.Series([False, True, None], dtype=ArrowDtype(pa.bool_()))
+    tm.assert_series_equal(result, expected)
+
+
+def test_str_replace_python_unicode_escape():
+    # GH 63901 - Python-style \uXXXX escapes should work with str.replace too
+    ser = pd.Series(["a", "\u0e01", None], dtype=ArrowDtype(pa.string()))
+    result = ser.str.replace(r"\u0e0[0-9]", "X", regex=True)
+    expected = pd.Series(["a", "X", None], dtype=ArrowDtype(pa.string()))
+    tm.assert_series_equal(result, expected)
+
+
+def test_str_count_python_unicode_escape():
+    # GH 63901 - Python-style \uXXXX escapes should work with str.count too
+    ser = pd.Series(["\u0e01\u0e02", "abc", None], dtype=ArrowDtype(pa.string()))
+    result = ser.str.count(r"\u0e0[0-9]")
+    expected = pd.Series([2, 0, None], dtype=ArrowDtype(pa.int32()))
     tm.assert_series_equal(result, expected)
 
 

@@ -1229,6 +1229,19 @@ class TestLocBaseIndependent:
         expected = DataFrame({"text": ["abc"], "language": ["en"]})
         tm.assert_frame_equal(df, expected)
 
+    def test_loc_setitem_empty_append_single_element_multiple_dtypes(self):
+        # GH#52825 - 1-element list assignment should work for various dtypes
+        df = DataFrame(columns=["int_col", "float_col", "str_col", "bool_col"])
+        df.loc[:, "int_col"] = [42]
+        df.loc[:, "float_col"] = [3.14]
+        df.loc[:, "str_col"] = ["hello"]
+        df.loc[:, "bool_col"] = [True]
+        assert len(df) == 1
+        assert df["int_col"].iloc[0] == 42
+        assert df["float_col"].iloc[0] == 3.14
+        assert df["str_col"].iloc[0] == "hello"
+        assert df["bool_col"].iloc[0] is True
+
     def test_loc_setitem_empty_append_raises(self):
         # GH6173, various appends to an empty dataframe
 

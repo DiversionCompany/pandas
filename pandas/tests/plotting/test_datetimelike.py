@@ -1738,6 +1738,18 @@ class TestTSPlot:
         with temp_file.open(mode="wb") as path:
             pickle.dump(fig, path)
 
+    def test_backwards_time_index_plot(self):
+        # GH#64819 - DataFrames with backwards (descending) time index
+        # should be plottable without raising ValueError about negative freq
+        dates = ["2026-03-24", "2026-03-23", "2026-03-22"]
+        data = DataFrame(
+            [0.5, 1, 2], index=np.array(dates).astype("datetime64[s]")
+        )
+        _, ax = mpl.pyplot.subplots()
+        # Should not raise ValueError: Frequency must be positive
+        data.plot(ax=ax)
+        mpl.pyplot.close()
+
 
 def _check_plot_works(f, freq=None, series=None, *args, **kwargs):
     fig = plt.gcf()

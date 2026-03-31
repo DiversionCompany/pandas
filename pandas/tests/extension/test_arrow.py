@@ -1795,6 +1795,22 @@ def test_str_contains_python_unicode_escape():
     tm.assert_series_equal(result, expected)
 
 
+def test_str_contains_python_unicode_escape_8digit():
+    # GH 63901 - Python-style \UXXXXXXXX (8-digit) escapes should work too
+    ser = pd.Series(["a", "\U0001f600", None], dtype=ArrowDtype(pa.string()))
+    result = ser.str.contains(r"\U0001f600")
+    expected = pd.Series([False, True, None], dtype=ArrowDtype(pa.bool_()))
+    tm.assert_series_equal(result, expected)
+
+
+def test_str_match_python_unicode_escape():
+    # GH 63901 - Python-style \uXXXX escapes should work with str.match too
+    ser = pd.Series(["\u0e01abc", "abc", None], dtype=ArrowDtype(pa.string()))
+    result = ser.str.match(r"[\u0e00-\u0e7f]")
+    expected = pd.Series([True, False, None], dtype=ArrowDtype(pa.bool_()))
+    tm.assert_series_equal(result, expected)
+
+
 @pytest.mark.parametrize(
     "side, pat, na, exp",
     [

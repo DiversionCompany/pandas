@@ -1391,6 +1391,7 @@ Plotting
 - Bug in :meth:`Series.plot` preventing a line and scatter plot from being aligned (:issue:`61005`)
 - Bug in :meth:`Series.plot` with ``kind="pie"`` with :class:`ArrowDtype` (:issue:`59192`)
 - Bug in plotting with a :class:`TimedeltaIndex` with non-nanosecond resolution displaying incorrect labels (:issue:`63237`)
+- Bug in :meth:`DataFrame.plot.bar` and :meth:`DataFrame.plot.barh` raising ``ValueError: x must be a label or position`` when ``x`` is a list of column labels (:issue:`21386`)
 
 Groupby/resample/rolling
 ^^^^^^^^^^^^^^^^^^^^^^^^

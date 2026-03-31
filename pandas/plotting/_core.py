@@ -1372,7 +1372,13 @@ class PlotAccessor(PandasObject):
             if x is not None:
                 if is_integer(x) and not holds_integer(data.columns):
                     x = data_cols[x]
-                elif not isinstance(data[x], ABCSeries):
+                elif not isinstance(data[x], (ABCSeries, ABCDataFrame)):
+                    # GH#21386: x can be a list of column labels (results in
+                    # a DataFrame), which is valid for bar/barh plots.
+                    # A single label gives a Series; a list gives a DataFrame.
+                    # Any other case (e.g. x not in columns) raises KeyError
+                    # from data[x] above, so we only need to reject scalars
+                    # that don't produce a Series/DataFrame.
                     raise ValueError("x must be a label or position")
                 data = data.set_index(x)
             if y is not None:

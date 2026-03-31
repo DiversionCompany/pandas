@@ -13,6 +13,7 @@ from pandas import (
     DatetimeIndex,
     HDFStore,
     Index,
+    IntervalIndex,
     Series,
     _testing as tm,
     bdate_range,
@@ -543,6 +544,32 @@ def test_store_datetime_mixed(temp_h5_path):
     )
     df["d"] = ts.index[:3]
     _check_roundtrip(df, tm.assert_frame_equal, path=temp_h5_path)
+
+
+@pytest.mark.filterwarnings("ignore::pandas.errors.PerformanceWarning")
+def test_round_trip_interval_index(temp_h5_path):
+    # GH#38305 - IntervalIndex should be saveable to and readable from HDF
+    data = DataFrame({"a": [1, 2, 3]})
+    data.index = pd.IntervalIndex.from_arrays([0.5, 1.5, 2.5], [1.0, 2.0, 3.0])
+
+    data.to_hdf(temp_h5_path, key="df")
+    result = read_hdf(temp_h5_path, "df")
+
+    tm.assert_frame_equal(result, data)
+    assert isinstance(result.index, pd.IntervalIndex)
+
+
+@pytest.mark.filterwarnings("ignore::pandas.errors.PerformanceWarning")
+def test_round_trip_interval_column(temp_h5_path):
+    # GH#38305 - IntervalIndex as a column should also round-trip correctly
+    data = DataFrame({"a": [1, 2, 3]})
+    data.index = pd.IntervalIndex.from_arrays([0.5, 1.5, 2.5], [1.0, 2.0, 3.0])
+
+    df_with_col = data.reset_index()
+    df_with_col.to_hdf(temp_h5_path, key="df")
+    result = read_hdf(temp_h5_path, "df")
+
+    tm.assert_frame_equal(result, df_with_col)
 
 
 def test_round_trip_equals(temp_h5_path):

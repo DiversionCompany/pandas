@@ -320,6 +320,13 @@ def array(
 
     data = extract_array(data, extract_numpy=True)
 
+    # GH#64280: reject multidimensional numpy arrays early; we only support 1-D.
+    if isinstance(data, np.ndarray) and data.ndim != 1:
+        raise ValueError(
+            f"'pandas.array' requires a 1-dimensional input, "
+            f"but got an array with {data.ndim} dimensions."
+        )
+
     # Handle numpy masked arrays: convert masked values to NA
     # GH#63879
     if isinstance(data, ma.MaskedArray):

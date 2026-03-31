@@ -609,3 +609,32 @@ def test_pd_array_structured_masked_array_raises():
     msg = "Cannot construct an array from an ndarray with compound dtype"
     with pytest.raises(ValueError, match=msg):
         pd.array(ma_arr)
+
+
+@pytest.mark.parametrize(
+    "dtype",
+    ["int64", "float64", np.dtype("int32"), np.dtype("float32")],
+)
+def test_pd_array_multidimensional_raises(dtype):
+    # GH#64280 - pd.array should reject multidimensional numpy arrays
+    arr_2d = np.array([[1, 2], [3, 4]])
+    msg = "'pandas.array' requires a 1-dimensional input"
+    with pytest.raises(ValueError, match=msg):
+        pd.array(arr_2d, dtype=dtype)
+
+
+def test_pd_array_multidimensional_no_dtype_raises():
+    # GH#64280 - pd.array should reject multidimensional numpy arrays
+    # regardless of dtype
+    arr_2d = np.array([[1, 2], [3, 4]])
+    msg = "'pandas.array' requires a 1-dimensional input"
+    with pytest.raises(ValueError, match=msg):
+        pd.array(arr_2d)
+
+
+def test_pd_array_3d_raises():
+    # GH#64280 - pd.array should reject 3D+ numpy arrays
+    arr_3d = np.arange(8).reshape(2, 2, 2)
+    msg = "'pandas.array' requires a 1-dimensional input"
+    with pytest.raises(ValueError, match=msg):
+        pd.array(arr_3d)

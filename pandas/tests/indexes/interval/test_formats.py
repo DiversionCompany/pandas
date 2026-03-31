@@ -141,3 +141,15 @@ class TestIntervalIndexRendering:
         assert repr(i) == (
             "Interval(2020-01-01 00:00:00, 2020-01-01 12:30:00, closed='right')"
         )
+
+    def test_interval_index_midnight_omits_time(self):
+        # GH#57748: IntervalIndex with tz-naive midnight Timestamps should
+        # display only date portion, matching the original behavior before
+        # the regression introduced in GH#55035
+        left = DatetimeIndex(["2019-07-04", "2019-12-31"])
+        right = DatetimeIndex(["2019-12-31", "2020-06-28"])
+        index = IntervalIndex.from_arrays(left, right, closed="left")
+        result = str(index[0])
+        assert result == "[2019-07-04, 2019-12-31)", (
+            f"Expected date-only repr, got: {result!r}"
+        )

@@ -90,3 +90,14 @@ class TestIndexConstructor:
         # Values should be preserved as bytes
         for val in df.index:
             assert isinstance(val, bytes)
+
+    @pytest.mark.parametrize("str_len", [1, 4, 8, 16, 32])
+    def test_constructor_numpy_fixed_length_bytes_various_sizes(self, str_len):
+        # GH#57645 - various S-dtype sizes should all work as index
+        arr = np.array(["a", "ab", "abc"], dtype=f"S{str_len}")
+        assert arr.dtype.kind == "S"
+
+        idx = Index(arr)
+        assert isinstance(idx, Index)
+        assert idx.dtype.kind == "S"
+        assert len(idx) == 3

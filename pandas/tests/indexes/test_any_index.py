@@ -235,3 +235,16 @@ class TestBigEndian:
         # Should not raise ValueError: Big-endian buffer not supported
         result = idx.get_indexer([1.5, 3.5], method=method)
         assert len(result) == 2
+
+    def test_index_big_endian_float64_get_indexer_nearest(self):
+        # GH#46085 - get_indexer with method="nearest" on big-endian float64
+        # Index should not raise ValueError on little-endian systems.
+        from pandas import Index
+
+        # Test with float64 big-endian (">f8")
+        arr = np.arange(6, dtype=">f8")
+        idx = Index(arr)
+        # Should not raise ValueError
+        result = idx.get_indexer([1.3, 2.5], method="nearest")
+        # 1.3 is nearest to index 1 (val 1.0), 2.5 is nearest to index 3 (val 3.0)
+        tm.assert_numpy_array_equal(result, np.array([1, 3]))

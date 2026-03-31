@@ -955,7 +955,10 @@ def test_listlike_lambda_raises(ops):
 
 
 def test_with_listlike_columns():
-    # GH 17348
+    # GH 17348, GH#35518
+    # When func returns a tuple on axis=1, the result is a DataFrame
+    # (each tuple element becomes a column).  This matches the pandas 1.0.x
+    # behavior.  Users who want a Series of tuples should use result_type="reduce".
     df = DataFrame(
         {
             "a": Series(np.random.default_rng(2).standard_normal(4)),
@@ -965,12 +968,28 @@ def test_with_listlike_columns():
     )
 
     result = df[["a", "b"]].apply(tuple, axis=1)
-    expected = Series([t[1:] for t in df[["a", "b"]].itertuples()])
-    tm.assert_series_equal(result, expected)
+    expected = df[["a", "b"]].copy()
+    expected.columns = range(2)
+    tm.assert_frame_equal(result, expected)
 
     result = df[["a", "ts"]].apply(tuple, axis=1)
-    expected = Series([t[1:] for t in df[["a", "ts"]].itertuples()])
-    tm.assert_series_equal(result, expected)
+    expected = df[["a", "ts"]].copy()
+    expected.columns = range(2)
+    tm.assert_frame_equal(result, expected)
+
+
+def test_apply_tuple_return_expands_to_dataframe():
+    # GH#35518: a lambda returning a tuple on axis=1 should produce a DataFrame
+    # (one column per tuple element), not a Series of tuples.
+    df = DataFrame({"a": [1, 2, 3], "b": [10, 20, 30]})
+    result = df.apply(lambda row: (row["a"] * 2, row["b"] + 5), axis=1)
+    expected = DataFrame({0: [2, 4, 6], 1: [15, 25, 35]})
+    tm.assert_frame_equal(result, expected)
+
+    # Users who genuinely want a Series of tuples can use result_type="reduce"
+    result_reduce = df.apply(lambda row: (row["a"], row["b"]), axis=1, result_type="reduce")
+    expected_reduce = Series([(1, 10), (2, 20), (3, 30)])
+    tm.assert_series_equal(result_reduce, expected_reduce)
 
 
 def test_with_listlike_columns_returning_list():

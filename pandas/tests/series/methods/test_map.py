@@ -693,3 +693,24 @@ def test_map_nullable_integer_precision(dtype):
     result = ser.map(lambda x: x + 2 if pd.notna(x) else x)
     expected = Series([large_int + 2, pd.NA], dtype=dtype)
     tm.assert_series_equal(result, expected)
+
+
+@pytest.mark.parametrize("dtype", ["Int64", "Float64", "boolean"])
+def test_map_masked_na_identity(dtype):
+    # GH#57390: pd.NA identity check (x is pd.NA) should work in map()
+    # for masked nullable dtypes. Previously, to_numpy() was called without
+    # na_value=pd.NA, so pd.NA was converted to np.nan and identity checks failed.
+    ser = Series([pd.NA], dtype=dtype)
+    result = ser.map(lambda x: 1 if x is pd.NA else 2)
+    expected = Series([1], dtype="Int64")
+    tm.assert_series_equal(result, expected)
+
+
+@pytest.mark.parametrize("dtype", ["Int64", "Float64"])
+def test_map_masked_mixed_na_identity(dtype):
+    # GH#57390: pd.NA identity check should work in map() for series
+    # containing both NA and non-NA values.
+    ser = Series([1, pd.NA, 3], dtype=dtype)
+    result = ser.map(lambda x: "na" if x is pd.NA else "val")
+    expected = Series(["val", "na", "val"])
+    tm.assert_series_equal(result, expected)

@@ -2681,6 +2681,10 @@ class ExtensionArray:
         result = self.copy()
 
         if is_list_like(value):
+            # GH#63842 - Python lists do not support numpy bool array indexing,
+            # so convert to numpy first to allow val = value[~mask] to work.
+            if isinstance(value, list):
+                value = np.asarray(value, dtype=object)
             val = value[~mask]
         else:
             val = value

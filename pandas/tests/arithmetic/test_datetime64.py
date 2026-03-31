@@ -119,6 +119,25 @@ class TestDatetime64ArrayLikeComparisons:
         obj = tm.box_expected(dta, box_with_array)
         assert_invalid_comparison(obj, other, box_with_array)
 
+    def test_dt64arr_cmp_arraylike_invalid_tzlocal_post_epoch(self):
+        # GH#64281 - regression test specifically for tzlocal with post-epoch dates
+        # tzlocal() with negative UTC offset (e.g. UTC-8) used to cause OSError on
+        # Windows when dates were pre-epoch (negative POSIX timestamps). Using dates
+        # in year 2000 avoids negative timestamps that caused time.localtime() to fail.
+        try:
+            from dateutil.tz import tzlocal as _tzlocal
+        except ImportError:
+            pytest.skip("dateutil not available")
+
+        tz = _tzlocal()
+        dta = date_range("2000-01-01", freq="ns", periods=10, tz=tz)._data
+
+        # Comparison with integer array should raise TypeError
+        other = np.arange(10)
+        msg = "Invalid comparison between|Cannot compare type|not supported between"
+        with pytest.raises(TypeError, match=msg):
+            dta < other
+
     def test_dt64arr_cmp_mixed_invalid(self, tz_naive_fixture):
         tz = tz_naive_fixture
 

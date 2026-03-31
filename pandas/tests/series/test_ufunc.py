@@ -526,3 +526,13 @@ def test_np_maximum_with_series(ufunc):
     result = ufunc(s1, s2)
     expected = pd.Series(ufunc(s1.to_numpy(), s2.to_numpy()))
     tm.assert_series_equal(result, expected)
+
+
+@pytest.mark.parametrize("ufunc", [np.maximum, np.minimum, np.fmax, np.fmin])
+def test_np_maximum_with_nan(ufunc):
+    # GH#60611: Ensure np.maximum/minimum/fmax/fmin work with NaN-containing Series
+    # fmax/fmin ignore NaN; maximum/minimum propagate NaN
+    s = pd.Series([1.0, np.nan, 3.0])
+    result = ufunc(s, 2.0)
+    expected = pd.Series(ufunc(s.to_numpy(), 2.0))
+    tm.assert_series_equal(result, expected)

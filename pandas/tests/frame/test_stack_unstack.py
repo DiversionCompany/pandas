@@ -1423,6 +1423,35 @@ def test_unstack_sort_false_nan(levels2, expected_columns):
     tm.assert_frame_equal(result, expected)
 
 
+def test_unstack_sort_false_with_unused_levels():
+    # GH#64150: unstack(0, sort=False) creates fake column names when there
+    # are unused levels in the MultiIndex.
+    # Create an index with unused level 'b' (only 'a' and 'c' appear).
+    full_idx = MultiIndex.from_product([["a", "b", "c"], ["x", "y"]])
+    # Take only rows for 'c' (0,1) first, then 'a' (4,5) — note 'b' is skipped
+    # and 'c' appears before 'a' in the data (sort=False matters for ordering)
+    idx = full_idx[[4, 5, 0, 1]]  # c-x, c-y, a-x, a-y
+    df = DataFrame({"val": [10, 20, 30, 40]}, index=idx)
+
+    result = df.unstack(0, sort=False)
+
+    # Expected: columns should be ('val', 'c') and ('val', 'a') in that order
+    expected = DataFrame(
+        {"val": {"x": 10, "y": 20}, "val2": {"x": 30, "y": 40}},
+        columns=MultiIndex.from_tuples(
+            [("val", "c"), ("val", "a")], names=[None, None]
+        ),
+        index=Index(["x", "y"], name=1),
+    )
+    # Build expected more carefully using the correct structure
+    expected = DataFrame(
+        [[10.0, 30.0], [20.0, 40.0]],
+        index=Index(["x", "y"], name=1),
+        columns=MultiIndex.from_tuples([("val", "c"), ("val", "a")]),
+    )
+    tm.assert_frame_equal(result, expected)
+
+
 def test_unstack_fill_frame_object():
     # GH12815 Test unstacking with object.
     data = Series(["a", "b", "c", "a"], dtype="object")

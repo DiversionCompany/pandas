@@ -156,7 +156,12 @@ class _Unstacker:
                 self.unique_nan_index = np.flatnonzero(nan_mask)[0]
 
             self.removed_level = self.removed_level.take(unique_codes)
-            self.removed_level_full = self.removed_level_full.take(unique_codes)
+            # GH#64150: removed_level_full must use the same index level as
+            # removed_level (i.e. self.index.levels after remove_unused_levels),
+            # not the original index.levels. unique_codes are indices into
+            # self.index.codes (the cleaned index), so applying them to the
+            # original index.levels would give wrong column labels.
+            self.removed_level_full = self.removed_level
 
         if get_option("performance_warnings"):
             # Bug fix GH 20601

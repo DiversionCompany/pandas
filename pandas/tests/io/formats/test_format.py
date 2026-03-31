@@ -2300,3 +2300,23 @@ def test_filepath_or_buffer_bad_arg_raises(float_frame, method):
     msg = "buf is not a file name and it has no write method"
     with pytest.raises(TypeError, match=msg):
         getattr(float_frame, method)(buf=object())
+
+
+def test_display_width_respected_for_wide_second_column():
+    # GH#21337: When display.width is set to a large value, the DataFrame
+    # should not show "..." (ellipsis) for rows even when the wide column
+    # comes second (after a narrow column).
+    d = [
+        ["Penicilline G", "CC1(C(N2C(S1)C(C2=O)NC(=O)CC3=CC=CC=C3)C(=O)O)C"],
+        ["Tetracycline", "CC1(C2CC3C(C(=O)C(=C(C3(C(=O)C2=C(C4=C1C=CC=C4O)O)O)O)C(=O)N)N(C)C)O"],
+        ["Ampicilline", "CC1(C(N2C(S1)C(C2=O)NC(=O)C(C3=CC=CC=C3)N)C(=O)O)C"],
+    ]
+    df = DataFrame(d, columns=["Name", "Smiles"])
+
+    with pd.option_context("display.width", 10000, "display.max_colwidth", 10000):
+        result = df.to_string()
+
+    # None of the rows should be truncated to "..."
+    assert "..." not in result
+    # All the long SMILES strings should appear in full
+    assert "CC1(C2CC3C(C(=O)C(=C(C3(C(=O)C2=C(C4=C1C=CC=C4O)O)O)O)C(=O)N)N(C)C)O" in result

@@ -74,3 +74,37 @@ class TestSeriesArgsort:
     def test_argsort_preserve_name(self, datetime_series):
         result = datetime_series.argsort()
         assert result.name == datetime_series.name
+
+    def test_argsort_stable_parameter(self):
+        # GH#64255: stable=True should use a stable sort algorithm,
+        # equivalent to kind='stable'. Previously, stable was silently ignored.
+        rng = np.random.default_rng(42)
+        ser = Series(rng.integers(0, 100, size=10000))
+
+        # stable=True should produce the same result as kind='stable'
+        result_stable_true = ser.argsort(stable=True)
+        result_stable_kind = ser.argsort(kind="stable")
+        tm.assert_series_equal(result_stable_true, result_stable_kind)
+
+        # stable=True should produce the same result as kind='mergesort'
+        result_mergesort = ser.argsort(kind="mergesort")
+        tm.assert_series_equal(result_stable_true, result_mergesort)
+
+        # stable=True should give stable sort (different from quicksort for ties)
+        result_quicksort = ser.argsort(kind="quicksort")
+        # The indices themselves might differ for ties, so we just verify
+        # the values are in sorted order for both
+        assert (ser.iloc[result_stable_true.values].diff().dropna() >= 0).all()
+        assert (ser.iloc[result_quicksort.values].diff().dropna() >= 0).all()
+
+    def test_argsort_stable_false_keeps_kind(self):
+        # GH#64255: stable=False (or None) should not override kind
+        rng = np.random.default_rng(42)
+        ser = Series(rng.integers(0, 100, size=1000))
+
+        result_stable_none = ser.argsort(kind="mergesort", stable=None)
+        result_mergesort = ser.argsort(kind="mergesort")
+        tm.assert_series_equal(result_stable_none, result_mergesort)
+
+        result_stable_false = ser.argsort(kind="mergesort", stable=False)
+        tm.assert_series_equal(result_stable_false, result_mergesort)

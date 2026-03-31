@@ -965,9 +965,17 @@ class BaseBlockManager(PandasObject):
                 # If we've got here, fill_value was not lib.no_default
 
                 dtype, _ = infer_dtype_from_scalar(fill_value)
-                if is_1d_only_ea_dtype(dtype) and len(mgr_locs) > 1:
+                # GH#26123: if ALL existing blocks are sparse (1D-only EA), new
+                # NA blocks must also be created per-column so that the sparse
+                # dtype is preserved.
+                all_sparse = all(
+                    is_1d_only_ea_dtype(blk.dtype) for blk in self.blocks
+                )
+                if (is_1d_only_ea_dtype(dtype) and len(mgr_locs) > 1) or (
+                    all_sparse and len(mgr_locs) > 1
+                ):
                     # Handle 1D-only extension dtypes by creating separate blocks
-                    # (GH#63993)
+                    # (GH#63993, GH#26123)
                     placements = [BlockPlacement(col_idx) for col_idx in mgr_locs]
                 else:
                     placements = [mgr_locs]
@@ -1032,7 +1040,15 @@ class BaseBlockManager(PandasObject):
             fill_value = np.nan
             # GH45857 avoid unnecessary upcasting
             dtype = interleaved_dtype([blk.dtype for blk in self.blocks])
-            if dtype is not None and np.issubdtype(dtype.type, np.floating):
+            if dtype is not None and isinstance(dtype, SparseDtype) and all(
+                is_1d_only_ea_dtype(blk.dtype) for blk in self.blocks
+            ):
+                # GH#26123: preserve SparseDtype for new NA columns when reindexing
+                # a fully-sparse DataFrame; new columns should also be sparse.
+                shape = (len(placement), self.shape[1])
+                block_values = make_na_array(dtype, shape, fill_value)
+                return new_block_2d(block_values, placement=placement)
+            elif dtype is not None and np.issubdtype(dtype.type, np.floating):
                 fill_value = dtype.type(fill_value)
 
         shape = (len(placement), self.shape[1])

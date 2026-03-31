@@ -874,6 +874,22 @@ class Index(IndexOpsMixin, PandasObject):
         self,
     ) -> libindex.IndexEngine | libindex.ExtensionEngine | libindex.MaskedIndexEngine:
         # For base class (object dtype) we get ObjectEngine
+
+        # GH#64889: For numeric ArrowExtensionArray, use MaskedIndexEngine directly
+        # from self._values before calling _get_engine_target (which now converts
+        # numeric Arrow types to object array to fix get_indexer on target).
+        if (
+            type(self) is Index
+            and isinstance(self._values, ArrowExtensionArray)
+            and is_numeric_dtype(self.dtype)
+            and self.dtype.kind != "O"
+        ):
+            try:
+                return _masked_engines[self._values.dtype.name](self._values)
+            except KeyError:
+                # Not supported yet e.g. decimal
+                pass
+
         target_values = self._get_engine_target()
 
         if isinstance(self._values, ArrowExtensionArray) and self.dtype.kind in "Mm":
@@ -5310,13 +5326,11 @@ class Index(IndexOpsMixin, PandasObject):
             type(self) is Index
             and isinstance(self._values, ExtensionArray)
             and not isinstance(self._values, BaseMaskedArray)
-            and not (
-                isinstance(self._values, ArrowExtensionArray)
-                and is_numeric_dtype(self.dtype)
-                # Exclude decimal
-                and self.dtype.kind != "O"
-            )
         ):
+            # GH#64889: Convert all non-Masked ExtensionArrays (including
+            # ArrowExtensionArray) to object so they can be used as get_indexer
+            # targets by any engine. ArrowExtensionArray numeric types now get
+            # MaskedIndexEngine via the explicit check in _engine instead.
             # TODO(ExtensionIndex): remove special-case, just use self._values
             return self._values.astype(object)
         # GH#53234: convert non-native byte order arrays to native byte order so

@@ -2245,3 +2245,17 @@ def test_resample_day_closed_right_label_values():
     # Bin 2: (2000-01-02 00:00, 2000-01-03 00:00] -> labeled 2000-01-03
     assert result.index[0] == Timestamp("2000-01-02")
     assert result.index[1] == Timestamp("2000-01-03")
+
+
+def test_resample_day_closed_left_matches_24h():
+    # GH#62200 - resample("D", closed="left") should also produce the same
+    # results as resample("24h", closed="left") after Day was decoupled from
+    # Tick in GH#61985.
+    index = date_range("1-1-2000", "2-15-2000", freq="h").union(
+        date_range("4-15-2000", "5-15-2000", freq="h")
+    )
+    s = Series(range(len(index)), index=index)
+    left = s.resample("D", label="left", closed="left").count()
+    right = s.resample("24h", label="left", closed="left").count()
+
+    tm.assert_series_equal(left, right, check_freq=False)

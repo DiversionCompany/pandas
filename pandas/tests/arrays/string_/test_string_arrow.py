@@ -122,6 +122,24 @@ def test_getitem_empty_preserves_large_string_type():
     assert isinstance(result_mask, ArrowStringArray)
 
 
+def test_str_methods_return_correct_type():
+    # GH#58651: verify that string accessor methods return correct types
+    # after the large_string switch in GH#58590
+    pa = pytest.importorskip("pyarrow")
+
+    ser = pd.Series(["abc", "123", "ABC", "Title Case"], dtype=StringDtype("pyarrow"))
+
+    # Boolean string methods should return bool/nullable bool arrays
+    for method in ["isalnum", "isalpha", "isdigit", "isnumeric", "istitle", "isupper",
+                   "islower"]:
+        result = getattr(ser.str, method)()
+        assert result.dtype == pd.BooleanDtype() or str(result.dtype) == "bool"
+
+    # Verify the underlying ArrowStringArray still uses large_string
+    arr = ser.array
+    assert pa.types.is_large_string(arr._pa_array.type)
+
+
 def test_constructor_from_list():
     # GH#27673
     pytest.importorskip("pyarrow")

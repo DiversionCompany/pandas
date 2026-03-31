@@ -3933,6 +3933,18 @@ def test_to_sql_preserves_user_registered_sqlite_converters():
             assert sqlite3.converters.get("TIMESTAMP") is custom_timestamp_converter, (
                 "to_sql() must not override user-registered 'timestamp' converter"
             )
+
+            # Also verify that reading back actually uses the custom converters
+            result = pd.read_sql("SELECT * FROM test", conn)
+            assert results.get("date_converter_called"), (
+                "Custom date converter was not called during read_sql"
+            )
+            assert results.get("timestamp_converter_called"), (
+                "Custom timestamp converter was not called during read_sql"
+            )
+            # The custom converter returns sentinel, so values should be sentinel
+            assert result["d"].iloc[0] is sentinel
+            assert result["t"].iloc[0] is sentinel
         finally:
             conn.close()
     finally:

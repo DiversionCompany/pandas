@@ -320,8 +320,18 @@ class _FrequencyInferer:
         quarterly_rule = self._get_quarterly_rule()
         if quarterly_rule:
             nquarters = self.mdiffs[0] / 3
-            mod_dict = {0: 12, 2: 11, 1: 10}
-            month = MONTH_ALIASES[mod_dict[self.rep_stamp.month % 3]]
+            # GH#63791: The mod_dict normalization maps all months within the
+            # same quarterly family to a single canonical anchor month. This is
+            # only valid when nquarters == 1, where all 4 months in a family
+            # (e.g. JAN/APR/JUL/OCT) produce identical date sequences.
+            # For nquarters > 1, different months within the same family produce
+            # different date sequences (e.g. 2BQS-JAN = Jan/Jul while
+            # 2BQS-OCT = Oct/Apr), so we must use the actual representative month.
+            if nquarters == 1:
+                mod_dict = {0: 12, 2: 11, 1: 10}
+                month = MONTH_ALIASES[mod_dict[self.rep_stamp.month % 3]]
+            else:
+                month = MONTH_ALIASES[self.rep_stamp.month]
             alias = f"{quarterly_rule}-{month}"
             return _maybe_add_count(alias, nquarters)
 

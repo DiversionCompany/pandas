@@ -26,6 +26,7 @@ from pandas.core.dtypes.common import (
     is_scalar,
 )
 
+import pandas as pd
 from pandas import (
     NA,
     DatetimeIndex,
@@ -384,4 +385,25 @@ def test_get_indexer_arrow_numeric_index(arrow_dtype):
     target = Index([1, 3, 4], dtype=arrow_dtype)
     result = idx.get_indexer(target)
     expected = np.array([0, 2, -1], dtype=np.intp)
+    tm.assert_numpy_array_equal(result, expected)
+
+
+def test_get_indexer_arrow_struct_index():
+    # GH#64889: Index(ArrowExtensionArray) with struct dtype should support get_indexer
+    # This was the original issue report scenario: struct/dict Arrow arrays
+    pa = pytest.importorskip("pyarrow")
+
+    arr = pa.array(
+        [
+            {"x": 1, "y": True},
+            {"x": 2, "y": False},
+            {"x": 3, "y": False},
+        ]
+    )
+    index = Index(pd.arrays.ArrowExtensionArray(arr))
+    target = pd.arrays.ArrowExtensionArray(
+        pa.array([{"x": 1, "y": True}, {"x": 4, "y": True}])
+    )
+    result = index.get_indexer(target)
+    expected = np.array([0, -1], dtype=np.intp)
     tm.assert_numpy_array_equal(result, expected)

@@ -274,6 +274,7 @@ Groupby/resample/rolling
 - Bug in :meth:`.Rolling.skew` and :meth:`.Rolling.kurt` (and their :class:`GroupBy` counterparts) returning ``0.0`` and ``-3.0`` respectively for degenerate windows or groups; these now return ``NaN`` (:issue:`62864`)
 - Bug in :meth:`.Rolling.skew` and :meth:`.Rolling.kurt` returning ``NaN`` for low-variance windows (:issue:`62946`)
 - Bug in :class:`.DatetimeIndexResamplerGroupby` where calling :meth:`~.Resampler.agg` with a dict when the outer :func:`~pandas.DataFrame.groupby` had ``as_index=False`` raised a ``ValueError`` (:issue:`52397`)
+- Bug in :meth:`DataFrame.resample` where using ``on=`` to specify a datetime column and calling :meth:`~.Resampler.count` would drop the ``on=`` column from the result (:issue:`53110`)
 
 Reshaping
 ^^^^^^^^^

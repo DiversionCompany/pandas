@@ -166,6 +166,7 @@ Datetimelike
 - Bug in :class:`Timestamp` constructor where passing ``np.str_`` objects would fail in Cython string parsing (:issue:`48974`)
 - Bug in :class:`Timestamp` constructor, :class:`Timedelta` constructor, :func:`to_datetime`, and :func:`to_timedelta` with non-round ``float`` input and ``unit`` failing to raise when the value is just outside the representable bounds (:issue:`57366`)
 - Bug in :func:`to_datetime` and :func:`to_timedelta` on ARM platforms where round ``float`` values outside the int64 domain (e.g. ``float(2**63)``) could silently produce incorrect results instead of raising (:issue:`64619`)
+- Bug in :func:`to_datetime` where parsing strings with microsecond precision (6 fractional digits) returned ``datetime64[ns]`` instead of ``datetime64[us]``, inconsistent with :class:`Timestamp` which correctly infers the resolution (:issue:`64252`)
 - Bug in :func:`to_datetime` and :func:`to_timedelta` where ``uint64`` values greater than ``int64`` max silently overflowed instead of raising :class:`OutOfBoundsDatetime` or :class:`OutOfBoundsTimedelta` (:issue:`60677`)
 - Bug in :func:`bdate_range` returning one fewer period than expected when ``end`` falls on a non-business day (e.g. a weekend) and ``periods`` is specified (:issue:`64834`)
 - Bug in :meth:`DatetimeArray.isin` and :meth:`TimedeltaArray.isin` where mismatched resolutions could silently truncate finer-resolution values, leading to false matches (:issue:`64545`)

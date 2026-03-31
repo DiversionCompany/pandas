@@ -157,6 +157,48 @@ class TestSeriesReplace:
         result = ser.replace(pd.Timestamp("20130103"), pd.Timestamp("20120101"))
         tm.assert_series_equal(result, expected)
 
+    def test_replace_datetime64_with_nan(self):
+        # GH#48034: Series.replace should not implicitly convert np.nan to NaT
+        # when the Series holds datetime64 values.
+        ser = pd.Series(pd.date_range("20130101", periods=3))
+        # Replace a specific timestamp with np.nan; result should be object dtype
+        # with np.nan, NOT pd.NaT.
+        result = ser.replace(pd.Timestamp("20130101"), np.nan)
+        expected = pd.Series(
+            [np.nan, pd.Timestamp("20130102"), pd.Timestamp("20130103")],
+            dtype=object,
+        )
+        tm.assert_series_equal(result, expected)
+        assert result[0] is np.nan or (
+            isinstance(result[0], float) and np.isnan(result[0])
+        )
+
+    def test_replace_timedelta64_with_nan(self):
+        # GH#48034: Series.replace should not implicitly convert np.nan to NaT
+        # when the Series holds timedelta64 values.
+        tdi = pd.timedelta_range(0, periods=3)
+        ser = pd.Series(tdi)
+        result = ser.replace(tdi[0], np.nan)
+        expected = pd.Series(
+            [np.nan, tdi[1], tdi[2]],
+            dtype=object,
+        )
+        tm.assert_series_equal(result, expected)
+        assert isinstance(result[0], float) and np.isnan(result[0])
+
+    def test_replace_datetimetz_with_nan(self):
+        # GH#48034: Series.replace should not implicitly convert np.nan to NaT
+        # when the Series holds tz-aware datetime64 values.
+        ts = pd.Timestamp("2015/01/01", tz="UTC")
+        ser = pd.Series([ts, pd.Timestamp("2015/01/02", tz="UTC")])
+        result = ser.replace(ts, np.nan)
+        expected = pd.Series(
+            [np.nan, pd.Timestamp("2015/01/02", tz="UTC")],
+            dtype=object,
+        )
+        tm.assert_series_equal(result, expected)
+        assert isinstance(result[0], float) and np.isnan(result[0])
+
     def test_replace_nat_with_tz(self):
         # GH 11792: Test with replacing NaT in a list with tz data
         ts = pd.Timestamp("2015/01/01", tz="UTC")

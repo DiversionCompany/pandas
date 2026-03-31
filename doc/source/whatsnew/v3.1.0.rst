@@ -164,6 +164,7 @@ Datetimelike
 - Bug in :meth:`DatetimeArray.isin` and :meth:`TimedeltaArray.isin` where mismatched resolutions could silently truncate finer-resolution values, leading to false matches (:issue:`64545`)
 - Bug in :func:`bdate_range` returning one fewer period than requested when ``end`` falls on a non-business day (e.g. a weekend) and ``periods`` is specified without ``start`` (:issue:`64834`)
 - Bug in :class:`~pandas.tseries.offsets.Second` (and other :class:`~pandas.tseries.offsets.Tick` subclasses) where dividing by a scalar integer or float truncated to the tick's native resolution instead of preserving sub-unit precision; e.g. ``Second(10) / 3`` now correctly returns ``Nano(3_333_333_333)`` and ``Second(1) / 2`` returns ``Milli(500)`` (:issue:`57264`)
+- Bug in :meth:`Series.replace` where replacing a value with ``np.nan`` in a ``datetime64`` or ``timedelta64`` :class:`Series` would implicitly convert ``np.nan`` to ``pd.NaT``; now the :class:`Series` is cast to ``object`` dtype and ``np.nan`` is stored as a float (:issue:`48034`)
 
 Timedelta
 ^^^^^^^^^

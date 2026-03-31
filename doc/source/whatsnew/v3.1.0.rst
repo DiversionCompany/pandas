@@ -220,6 +220,7 @@ MultiIndex
 I/O
 ^^^
 - Bug in :meth:`DataFrame.to_sql` where user-registered ``sqlite3`` converters for ``"date"`` and ``"timestamp"`` types were overridden when writing to a SQLite database (:issue:`64337`)
+- Bug in :func:`read_sql` where DBAPI2 cursors using a dict-based row factory (e.g. ``pymysql`` with ``DictCursor``) returned incorrect or missing values because rows returned as dicts were not handled correctly (:issue:`53028`)
 - Fixed bug in :func:`read_csv` with the ``c`` engine where an embedded ``\r`` followed by a space in an unquoted field could cause an infinite re-parsing loop, producing spurious rows or a buffer overflow (:issue:`51141`)
 - Fixed bug in :func:`read_csv` with the ``c`` engine where extra fields on the first data line (e.g. a trailing comma) were silently ignored instead of raising a :class:`~pandas.errors.ParserError`, causing incorrect integer conversion of values like ``"1 "`` (:issue:`64655`)
 - Fixed bug in :func:`read_csv` where integers larger than the maximum ``uint64`` value (e.g. ``99999999999999999999``) were silently wrapped or ignored instead of being returned as Python integer objects with ``object`` dtype (:issue:`55232`)

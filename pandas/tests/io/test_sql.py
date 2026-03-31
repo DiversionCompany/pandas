@@ -4444,3 +4444,52 @@ def test_xsqlite_if_exists(sqlite_buildin):
         (5, "E"),
     ]
     drop_table(table_name, sqlite_buildin)
+
+
+def test_read_sql_dict_cursor():
+    # GH#53028 - DBAPI2 cursors with dict-based row factories (e.g. pymysql
+    # DictCursor) return rows as dicts rather than tuples. pandas should handle
+    # this gracefully and produce correct column values.
+    #
+    # We simulate a DictCursor by using sqlite3 with a custom row_factory that
+    # returns dict objects, mirroring what pymysql DictCursor does.
+    def dict_row_factory(cursor, row):
+        return dict(zip([col[0] for col in cursor.description], row))
+
+    con = sqlite3.connect(":memory:")
+    con.row_factory = dict_row_factory
+    con.execute("CREATE TABLE test (a INTEGER, b TEXT, c REAL)")
+    con.execute("INSERT INTO test VALUES (1, 'foo', 3.14)")
+    con.execute("INSERT INTO test VALUES (2, 'bar', 2.72)")
+    con.commit()
+
+    result = sql.read_sql("SELECT a, b, c FROM test", con)
+    expected = DataFrame(
+        {"a": [1, 2], "b": ["foo", "bar"], "c": [3.14, 2.72]},
+    )
+    # Align dtypes: SQLite stores integers as int64
+    expected["a"] = expected["a"].astype(np.int64)
+    tm.assert_frame_equal(result, expected)
+    con.close()
+
+
+def test_read_sql_dict_cursor_chunksize():
+    # GH#53028 - same as test_read_sql_dict_cursor but with chunksize
+    # to exercise the _query_iterator path.
+    def dict_row_factory(cursor, row):
+        return dict(zip([col[0] for col in cursor.description], row))
+
+    con = sqlite3.connect(":memory:")
+    con.row_factory = dict_row_factory
+    con.execute("CREATE TABLE test (a INTEGER, b TEXT)")
+    con.execute("INSERT INTO test VALUES (1, 'foo')")
+    con.execute("INSERT INTO test VALUES (2, 'bar')")
+    con.execute("INSERT INTO test VALUES (3, 'baz')")
+    con.commit()
+
+    chunks = list(sql.read_sql("SELECT a, b FROM test", con, chunksize=2))
+    result = pd.concat(chunks, ignore_index=True)
+    expected = DataFrame({"a": [1, 2, 3], "b": ["foo", "bar", "baz"]})
+    expected["a"] = expected["a"].astype(np.int64)
+    tm.assert_frame_equal(result, expected)
+    con.close()

@@ -34,7 +34,10 @@ from pandas.core.dtypes.dtypes import (
     PeriodDtype,
 )
 
-from pandas import DataFrame
+from pandas import (
+    DataFrame,
+    to_datetime,
+)
 import pandas.core.common as com
 
 from pandas.tseries.frequencies import to_offset
@@ -386,8 +389,31 @@ def parse_table_schema(json, precise_float: bool) -> DataFrame:
             'table="orient" can not yet read ISO-formatted Timedelta data'
         )
 
+    # GH#52595: For datetime columns without tz in schema, try astype first;
+    # if it fails (e.g. due to tz-aware ISO strings like "2022-01-01T00:00:00Z"
+    # from data written by pandas 1.x), fall back to to_datetime + tz_localize(None).
+    datetime_cols = {
+        col: dtype
+        for col, dtype in dtypes.items()
+        if dtype == "datetime64[ns]"
+    }
+    non_datetime_dtypes = {
+        col: dtype for col, dtype in dtypes.items() if col not in datetime_cols
+    }
+
     with option_context("future.distinguish_nan_and_na", False):
-        df = df.astype(dtypes)
+        if non_datetime_dtypes:
+            df = df.astype(non_datetime_dtypes)
+
+    for col in datetime_cols:
+        if col in df.columns:
+            try:
+                df[col] = df[col].astype("datetime64[ns]")
+            except (TypeError, ValueError):
+                # GH#52595: Fall back for tz-aware ISO strings (e.g. "...Z")
+                # that pandas 1.x would accept for tz-naive datetime columns.
+                # Parse as UTC then convert to tz-naive (removing tz info).
+                df[col] = to_datetime(df[col], utc=True).dt.tz_convert(None)
 
     if "primaryKey" in table["schema"]:
         df = df.set_index(table["schema"]["primaryKey"])

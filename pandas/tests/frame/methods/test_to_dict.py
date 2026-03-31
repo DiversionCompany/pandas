@@ -539,3 +539,21 @@ def test_to_dict_list_pd_scalars(val):
     result = df.to_dict(orient="list")
     expected = {"a": [val]}
     assert result == expected
+
+
+def test_to_dict_orient_dict_warns_on_duplicate_index():
+    # GH#25408 - to_dict(orient='dict') with duplicate index causes data loss,
+    # should warn the user
+    df = DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}, index=[0, 0, 1])
+    with tm.assert_produces_warning(UserWarning, match="index is not unique"):
+        result = df.to_dict()
+    # Verify data loss occurred (duplicate index -> only last value kept)
+    assert result == {"a": {0: 2, 1: 3}, "b": {0: 5, 1: 6}}
+
+
+def test_to_dict_orient_dict_no_warn_on_unique_index():
+    # GH#25408 - no warning when index is unique
+    df = DataFrame({"a": [1, 2, 3]}, index=[0, 1, 2])
+    with tm.assert_produces_warning(None):
+        result = df.to_dict()
+    assert result == {"a": {0: 1, 1: 2, 2: 3}}

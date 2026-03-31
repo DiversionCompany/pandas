@@ -169,6 +169,14 @@ def to_dict(
         return into_c((k, v) for k, v in df.items())
 
     if orient == "dict":
+        # GH#25408: warn when the index is not unique, as duplicate index labels
+        # cause data loss (only the last value for each label is kept).
+        if not df.index.is_unique:
+            warnings.warn(
+                "DataFrame index is not unique, some rows will be omitted.",
+                UserWarning,
+                stacklevel=find_stack_level(),
+            )
         return into_c((k, v.to_dict(into=into)) for k, v in df.items())
 
     box_native_indices = [

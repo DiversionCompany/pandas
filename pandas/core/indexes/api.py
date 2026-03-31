@@ -246,6 +246,24 @@ def union_indexes(indexes, sort: bool | lib.NoDefault = True) -> Index:
 
         for other in indexes[1:]:
             result = result.union(other, sort=None if sort else False)
+
+        # GH#64253: recover freq when all inputs had the same non-None freq
+        # but the sequential intermediate unions lost it (e.g. CustomBusinessDay
+        # where intermediate results are not valid sequences of that freq).
+        if isinstance(result, DatetimeIndex) and result.freq is None:
+            input_freqs = {
+                idx.freq
+                for idx in indexes
+                if isinstance(idx, DatetimeIndex) and idx.freq is not None
+            }
+            if len(input_freqs) == 1:
+                candidate_freq = next(iter(input_freqs))
+                try:
+                    type(result._data)._validate_frequency(result, candidate_freq)
+                    result._data._freq = candidate_freq
+                except ValueError:
+                    pass
+
         return result
 
     elif kind == "array":

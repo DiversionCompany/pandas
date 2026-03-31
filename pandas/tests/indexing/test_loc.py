@@ -1229,6 +1229,19 @@ class TestLocBaseIndependent:
         expected = DataFrame({"text": ["abc"], "language": ["en"]})
         tm.assert_frame_equal(df, expected)
 
+    def test_loc_setitem_empty_append_single_element_multiple_dtypes(self):
+        # GH#52825 - 1-element list assignment should work for various dtypes
+        df = DataFrame(columns=["int_col", "float_col", "str_col", "bool_col"])
+        df.loc[:, "int_col"] = [42]
+        df.loc[:, "float_col"] = [3.14]
+        df.loc[:, "str_col"] = ["hello"]
+        df.loc[:, "bool_col"] = [True]
+        assert len(df) == 1
+        assert df["int_col"].iloc[0] == 42
+        assert df["float_col"].iloc[0] == 3.14
+        assert df["str_col"].iloc[0] == "hello"
+        assert df["bool_col"].iloc[0] is True
+
     def test_loc_setitem_empty_append_raises(self):
         # GH6173, various appends to an empty dataframe
 
@@ -1568,6 +1581,19 @@ class TestLocBaseIndependent:
 
         with pytest.raises(ValueError, match=msg):
             ser.loc[:] = data
+
+    def test_loc_setitem_2d_array_single_column_consistent_with_setitem(self):
+        # GH#46544 - df.loc[:, col] = 2D_array should be consistent with
+        # df[col] = 2D_array (both store the 2D array in the single column)
+        array_2d = np.zeros((10, 2))
+        df1 = DataFrame(np.zeros((10, 3)))
+        df2 = DataFrame(np.zeros((10, 3)))
+
+        df1[0] = array_2d  # setitem path
+        df2.loc[:, 0] = array_2d  # loc setitem path - should not raise
+
+        # Both should produce the same result
+        tm.assert_frame_equal(df1, df2)
 
     def test_loc_getitem_interval_index(self):
         # GH#19977
@@ -2123,6 +2149,24 @@ class TestLocSetitemWithExpansion:
                 "A": Categorical(["A", "B"], categories=["A", "B"]),
                 "B": [1, 2],
                 "C": Categorical(["D", "E"], categories=["D", "E"]),
+            }
+        )
+        tm.assert_frame_equal(df, expected)
+
+    def test_loc_setitem_convert_object_column_to_ordered_categorical(self):
+        # GH#52593 - same as above but with ordered=True
+        df = DataFrame({"A": [1, 2], "B": ["x", "y"]})
+        assert df["B"].dtype == object
+        df.loc[:, "B"] = Categorical(
+            df["B"], categories=["x", "y"], ordered=True
+        )
+        assert df["B"].dtype == CategoricalDtype(
+            categories=["x", "y"], ordered=True
+        )
+        expected = DataFrame(
+            {
+                "A": [1, 2],
+                "B": Categorical(["x", "y"], categories=["x", "y"], ordered=True),
             }
         )
         tm.assert_frame_equal(df, expected)

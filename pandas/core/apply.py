@@ -1060,23 +1060,34 @@ class FrameApply(NDFrameApply):
         if not should_reduce:
             try:
                 if self.axis == 0:
+                    probe = Series([], dtype=np.float64)
                     r = self.func(
-                        Series([], dtype=np.float64), *self.args, **self.kwargs
+                        probe.to_numpy() if self.raw else probe,
+                        *self.args,
+                        **self.kwargs,
                     )
                 else:
+                    probe = Series(index=self.columns, dtype=np.float64)
                     r = self.func(
-                        Series(index=self.columns, dtype=np.float64),
+                        probe.to_numpy() if self.raw else probe,
                         *self.args,
                         **self.kwargs,
                     )
             except Exception:
                 pass
             else:
+                # GH#41997: when raw=True, func receives ndarray not Series;
+                # check result type using ndarray instead of Series
                 should_reduce = not isinstance(r, Series)
 
         if should_reduce:
             if len(self.agg_axis):
-                r = self.func(Series([], dtype=np.float64), *self.args, **self.kwargs)
+                probe = Series([], dtype=np.float64)
+                r = self.func(
+                    probe.to_numpy() if self.raw else probe,
+                    *self.args,
+                    **self.kwargs,
+                )
             else:
                 r = np.nan
 
@@ -1450,6 +1461,15 @@ class FrameColumnApply(FrameApply):
 
         # we have requested to expand
         if self.result_type == "expand":
+            result = self.infer_to_same_shape(results, res_index)
+
+        # GH#35518: When the function returns a tuple without explicit
+        # result_type, expand the tuple into a DataFrame (one column per
+        # element).  This restores the pandas 1.0.x behavior where a
+        # tuple-returning function on axis=1 produced a DataFrame rather
+        # than a Series of tuples.  Users who genuinely want a Series of
+        # tuples should pass result_type="reduce".
+        elif self.result_type is None and isinstance(results[0], tuple):
             result = self.infer_to_same_shape(results, res_index)
 
         # we have a non-series and don't want inference

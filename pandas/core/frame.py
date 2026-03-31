@@ -585,6 +585,11 @@ class DataFrame(NDFrame, OpsMixin):
                     data = np.asarray(data)
                 else:
                     data = list(data)
+            elif not isinstance(data, (list, np.ndarray)):
+                # GH#41682: UserList and other non-list Sequences need to be
+                # converted to a plain list so that downstream processing
+                # (e.g. maybe_convert_platform) handles them correctly.
+                data = list(data)
             if len(data) > 0:
                 if is_dataclass(data[0]):
                     data = dataclasses_to_dicts(data)
@@ -18591,11 +18596,22 @@ class DataFrame(NDFrame, OpsMixin):
         elif isinstance(values, Series):
             if not values.index.is_unique:
                 raise ValueError("cannot compute isin with a duplicate axis.")
-            result = self.eq(values.reindex_like(self), axis="index")
+            aligned_values = values.reindex_like(self)
+            result = self.eq(aligned_values, axis="index")
+            # GH#35565: NA/None values in self should match NA/None in values
+            # at the same index position (isin semantics: NA matches NA)
+            self_na = self.isna()
+            values_na = aligned_values.isna()
+            # Broadcast values_na (1D) across columns using apply
+            result = result | self_na.apply(lambda col: col & values_na)
         elif isinstance(values, DataFrame):
             if not (values.columns.is_unique and values.index.is_unique):
                 raise ValueError("cannot compute isin with a duplicate axis.")
-            result = self.eq(values.reindex_like(self))
+            aligned_values = values.reindex_like(self)
+            result = self.eq(aligned_values)
+            # GH#35565: NA/None values in self should match NA/None in values
+            # at aligned positions (isin semantics: NA matches NA)
+            result = result | (self.isna() & aligned_values.isna())
         else:
             if not is_list_like(values):
                 raise TypeError(

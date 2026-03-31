@@ -1679,3 +1679,31 @@ class TestReadHtml:
         result = flavor_read_html(StringIO(data))[0]
         expected = DataFrame({"Codes": ["41651,65125,17328,02872,49459,79208,ABCDE"]})
         tm.assert_frame_equal(result, expected)
+
+    def test_nested_table_header_not_duplicated(self, flavor_read_html):
+        # GH#64524 - nested table's header should not appear as a data row
+        # when the inner table is parsed by attrs filter
+        data = """
+        <table>
+            <thead>
+                <tr><th></th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>
+                        <table id="descendant">
+                            <thead>
+                                <tr><th>A</th><th>B</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>1</td><td>2</td></tr>
+                            </tbody>
+                        </table>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        """
+        result = flavor_read_html(StringIO(data), attrs={"id": "descendant"})[0]
+        expected = DataFrame([[1, 2]], columns=["A", "B"])
+        tm.assert_frame_equal(result, expected)

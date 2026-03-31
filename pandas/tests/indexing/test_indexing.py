@@ -1134,3 +1134,24 @@ def test_object_dtype_series_set_series_element():
 
     s2.iloc[1] = Series()
     tm.assert_series_equal(s2.iloc[1], Series())
+
+
+def test_setitem_scalar_with_length1_list_bool_mask():
+    # GH#26333 - assigning a length-1 list-like using a boolean mask should
+    # broadcast the single element as a scalar, matching numpy behavior
+    # numpy: arr[bool_mask] = [scalar] works fine
+    ser = Series([1.0, 2.0, 3.0, 4.0, 5.0])
+    mask = np.array([True, False, True, False, True])
+    ser[mask] = [99.0]
+    expected = Series([99.0, 2.0, 99.0, 4.0, 99.0])
+    tm.assert_series_equal(ser, expected)
+
+
+def test_setitem_scalar_with_length1_list_integer_indexer():
+    # GH#26333 - assigning a length-1 list-like with an integer list indexer
+    # should broadcast the single element as a scalar
+    ser = Series([1.0, 2.0, 3.0, 4.0, 5.0])
+    indexer = [0, 2, 4]
+    ser[indexer] = [99.0]
+    expected = Series([99.0, 2.0, 99.0, 4.0, 99.0])
+    tm.assert_series_equal(ser, expected)

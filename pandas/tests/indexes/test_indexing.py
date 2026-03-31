@@ -360,3 +360,28 @@ def test_get_indexer_non_unique_nans_in_object_dtype_target(nulls_fixture):
     result_idx, result_missing = idx.get_indexer_non_unique(target)
     tm.assert_numpy_array_equal(result_idx, np.array([0, -1], dtype=np.intp))
     tm.assert_numpy_array_equal(result_missing, np.array([1], dtype=np.intp))
+
+
+@pytest.mark.parametrize(
+    "arrow_dtype",
+    [
+        "int8[pyarrow]",
+        "int16[pyarrow]",
+        "int32[pyarrow]",
+        "int64[pyarrow]",
+        "uint8[pyarrow]",
+        "uint16[pyarrow]",
+        "uint32[pyarrow]",
+        "uint64[pyarrow]",
+        "float32[pyarrow]",
+        "float64[pyarrow]",
+    ],
+)
+def test_get_indexer_arrow_numeric_index(arrow_dtype):
+    # GH#64889: Index(ArrowExtensionArray) should be usable as a get_indexer target
+    pytest.importorskip("pyarrow")
+    idx = Index([1, 2, 3], dtype=arrow_dtype)
+    target = Index([1, 3, 4], dtype=arrow_dtype)
+    result = idx.get_indexer(target)
+    expected = np.array([0, 2, -1], dtype=np.intp)
+    tm.assert_numpy_array_equal(result, expected)

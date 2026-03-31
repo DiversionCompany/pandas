@@ -157,7 +157,11 @@ class StringFormatter:
         # total width = sum of column widths + adjoin spacing (1 per gap)
         total_width = sum(col_lens) + n_cols - 1
 
-        width, _ = get_terminal_size()
+        # GH#21337: Use display.width (self.line_width) if set; otherwise fall
+        # back to the actual terminal width. Previously this always used
+        # get_terminal_size(), ignoring the user-configured display.width, which
+        # caused rows to be shown as "..." even when display.width was large.
+        width = self.line_width if self.line_width is not None else get_terminal_size()[0]
         dif = total_width - width
         # '+ 1' to avoid too wide repr (GH PR #17023)
         adj_dif = dif + 1

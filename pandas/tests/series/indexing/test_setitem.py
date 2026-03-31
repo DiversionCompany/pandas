@@ -1881,3 +1881,20 @@ def test_setitem_1d_numpy_array_object_dtype_via_loc():
     assert s.loc["x"].shape == arr.shape, (
         f"After loc reassignment, expected shape {arr.shape}, got {s.loc['x'].shape}"
     )
+
+
+def test_setitem_1d_numpy_array_object_dtype_non_integer():
+    # GH#53565 - Should work with string and float arrays too, not just integers
+    s = Series(dtype=object)
+
+    # Float array
+    arr_float = np.array([3.14])
+    s["f"] = arr_float
+    s["f"] = arr_float  # reassignment
+    assert s["f"].shape == arr_float.shape
+
+    # String array
+    arr_str = np.array(["hello"])
+    s["g"] = arr_str
+    s["g"] = arr_str  # reassignment
+    assert s["g"].shape == arr_str.shape

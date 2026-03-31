@@ -3933,6 +3933,18 @@ def test_to_sql_preserves_user_registered_sqlite_converters():
             assert sqlite3.converters.get("TIMESTAMP") is custom_timestamp_converter, (
                 "to_sql() must not override user-registered 'timestamp' converter"
             )
+
+            # Also verify that reading back actually uses the custom converters
+            result = pd.read_sql("SELECT * FROM test", conn)
+            assert results.get("date_converter_called"), (
+                "Custom date converter was not called during read_sql"
+            )
+            assert results.get("timestamp_converter_called"), (
+                "Custom timestamp converter was not called during read_sql"
+            )
+            # The custom converter returns sentinel, so values should be sentinel
+            assert result["d"].iloc[0] is sentinel
+            assert result["t"].iloc[0] is sentinel
         finally:
             conn.close()
     finally:
@@ -4492,4 +4504,27 @@ def test_read_sql_dict_cursor_chunksize():
     expected = DataFrame({"a": [1, 2, 3], "b": ["foo", "bar", "baz"]})
     expected["a"] = expected["a"].astype(np.int64)
     tm.assert_frame_equal(result, expected)
+    con.close()
+
+
+def test_read_sql_dict_cursor_data_not_column_names():
+    # GH#53028 - regression where dict cursor caused column names to appear
+    # as data values (each row showed column name instead of actual value)
+    def dict_row_factory(cursor, row):
+        return dict(zip([col[0] for col in cursor.description], row))
+
+    con = sqlite3.connect(":memory:")
+    con.row_factory = dict_row_factory
+    con.execute("CREATE TABLE sample (id INTEGER, value TEXT, state_id INTEGER)")
+    con.execute("INSERT INTO sample VALUES (117, 'ABCDEF', 5)")
+    con.execute("INSERT INTO sample VALUES (163, 'DEFRDC', 5)")
+    con.commit()
+
+    result = sql.read_sql("SELECT * FROM sample", con)
+
+    # Verify data contains actual values, NOT column names
+    assert list(result.columns) == ["id", "value", "state_id"]
+    assert result.iloc[0]["id"] == 117  # not "id"
+    assert result.iloc[0]["value"] == "ABCDEF"  # not "value"
+    assert result.iloc[1]["id"] == 163  # not "id"
     con.close()

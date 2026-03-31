@@ -636,16 +636,32 @@ class _BeautifulSoupHtml5LibFrameParser(_HtmlFrameParser):
         return row.find_all(("td", "th"), recursive=False)
 
     def _parse_thead_tr(self, table):
-        return table.select("thead tr")
+        # GH#64524: use recursive=False to avoid picking up rows from
+        # nested tables (descendant <thead> elements).
+        result = []
+        for thead in table.find_all("thead", recursive=False):
+            result.extend(thead.find_all("tr", recursive=False))
+        return result
 
     def _parse_tbody_tr(self, table):
-        from_tbody = table.select("tbody tr")
-        from_root = table.find_all("tr", recursive=False)
-        # HTML spec: at most one of these lists has content
-        return from_tbody + from_root
+        # GH#64524: use recursive=False to avoid picking up rows from
+        # nested tables (descendant <tbody> elements).
+        tbodies = table.find_all("tbody", recursive=False)
+        if tbodies:
+            result = []
+            for tbody in tbodies:
+                result.extend(tbody.find_all("tr", recursive=False))
+            return result
+        # Fall back to direct <tr> children of the table element.
+        return table.find_all("tr", recursive=False)
 
     def _parse_tfoot_tr(self, table):
-        return table.select("tfoot tr")
+        # GH#64524: use recursive=False to avoid picking up rows from
+        # nested tables (descendant <tfoot> elements).
+        result = []
+        for tfoot in table.find_all("tfoot", recursive=False):
+            result.extend(tfoot.find_all("tr", recursive=False))
+        return result
 
     def _setup_build_doc(self):
         raw_text = _read(self.io, self.encoding, self.storage_options)
@@ -676,11 +692,6 @@ class _BeautifulSoupHtmlParserFrameParser(_BeautifulSoupHtml5LibFrameParser):
     """
     HTML to DataFrame parser that uses BeautifulSoup with Python's built-in
     html.parser under the hood.
-
-    This parser correctly handles nested tables by only selecting <tr> elements
-    that are direct children of the immediate <thead>/<tbody>/<tfoot>, rather
-    than recursively selecting all descendant <tr> elements (which would
-    inadvertently include rows from nested tables).
 
     See Also
     --------

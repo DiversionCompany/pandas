@@ -163,3 +163,29 @@ class TestSeriesClip:
         result = ser.clip(lower=lower)
         expected = Series([0, 2, 3])
         tm.assert_series_equal(result, expected)
+
+    def test_np_clip_negative_a_min(self):
+        # GH#25066 - regression in 0.24 where np.clip did not work for
+        # some values of a_min (e.g. negative values)
+        ser = Series([-5, -2, 0, 2, 5], dtype="float64")
+
+        # Clip with negative a_min (values below a_min should be clipped up)
+        result = np.clip(ser, -3, 3)
+        expected = Series([-3.0, -2.0, 0.0, 2.0, 3.0])
+        tm.assert_series_equal(result, expected)
+
+        # Clip with negative a_min and all values above a_min (only upper matters)
+        result = np.clip(ser, -10, 3)
+        expected = Series([-5.0, -2.0, 0.0, 2.0, 3.0])
+        tm.assert_series_equal(result, expected)
+
+        # Clip with negative a_min that affects some values
+        result = np.clip(ser, -3, None)
+        expected = Series([-3.0, -2.0, 0.0, 2.0, 5.0])
+        tm.assert_series_equal(result, expected)
+
+        # Results should match numpy's behavior on the underlying array
+        for a_min, a_max in [(-3, 3), (-10, 3), (-1, 1), (0, 4)]:
+            pd_result = np.clip(ser, a_min, a_max)
+            np_result = Series(np.clip(ser.values, a_min, a_max))
+            tm.assert_series_equal(pd_result, np_result)

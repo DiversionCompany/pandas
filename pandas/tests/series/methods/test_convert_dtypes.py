@@ -338,3 +338,20 @@ class TestSeriesConvertDtypes:
         ser = pd.Series([1.5 + 3.0j, 1.5 - 3.0j])
         result = ser.convert_dtypes()
         tm.assert_series_equal(result, ser)
+
+    def test_convert_dtypes_preserves_string_storage(self):
+        # GH#64239: convert_dtypes() should preserve the storage backend of
+        # StringDtype when na_value is np.nan (pyarrow-backed string with
+        # future.infer_string=True).
+        pytest.importorskip("pyarrow")
+        import numpy as np
+
+        from pandas import StringDtype
+
+        ser = pd.Series(
+            ["a", "b", "c"], dtype=StringDtype(storage="pyarrow", na_value=np.nan)
+        )
+        result = ser.convert_dtypes()
+        assert result.dtype == StringDtype(storage="pyarrow", na_value=np.nan), (
+            f"Expected StringDtype(storage='pyarrow', na_value=nan), got {result.dtype}"
+        )

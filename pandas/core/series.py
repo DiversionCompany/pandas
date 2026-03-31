@@ -1885,6 +1885,15 @@ class Series(base.IndexOpsMixin, NDFrame):  # type: ignore[misc]
         # GH16122
         into_c = com.standardize_mapping(into)
 
+        # GH#25408: warn when the index is not unique, as duplicate index labels
+        # cause data loss (only the last value for each label is kept).
+        if not self.index.is_unique:
+            warnings.warn(
+                "Series index is not unique, some values will be omitted.",
+                UserWarning,
+                stacklevel=find_stack_level(),
+            )
+
         if is_object_dtype(self.dtype) or isinstance(self.dtype, ExtensionDtype):
             return into_c((k, maybe_box_native(v)) for k, v in self.items())
         else:
@@ -4179,7 +4188,7 @@ class Series(base.IndexOpsMixin, NDFrame):  # type: ignore[misc]
         axis: Axis = 0,
         kind: SortKind = "quicksort",
         order: None = None,
-        stable: None = None,
+        stable: bool | None = None,
     ) -> Series:
         """
         Return the integer indices that would sort the Series values.
@@ -4196,8 +4205,15 @@ class Series(base.IndexOpsMixin, NDFrame):  # type: ignore[misc]
             information. 'mergesort' and 'stable' are the only stable algorithms.
         order : None
             Has no effect but is accepted for compatibility with numpy.
-        stable : None
-            Has no effect but is accepted for compatibility with numpy.
+        stable : bool, default None
+            If ``True``, use a stable sorting algorithm. Equivalent to passing
+            ``kind='stable'``. If ``None`` (the default), use the algorithm
+            specified by ``kind``. See :func:`numpy.argsort` for more information.
+
+            .. versionchanged:: 3.1.0
+               Previously, this parameter was silently ignored. Now it correctly
+               overrides ``kind`` to use a stable sort when ``True``
+               (:issue:`64255`).
 
         Returns
         -------
@@ -4221,6 +4237,11 @@ class Series(base.IndexOpsMixin, NDFrame):  # type: ignore[misc]
         if axis != -1:
             # GH#54257 We allow -1 here so that np.argsort(series) works
             self._get_axis_number(axis)
+
+        # GH#64255: stable=True should override kind to use a stable sort,
+        # matching the behavior of numpy.argsort(stable=True).
+        if stable:
+            kind = "stable"
 
         result = self.array.argsort(kind=kind)
 

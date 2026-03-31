@@ -7,6 +7,7 @@ import pandas as pd
 from pandas import (
     CategoricalIndex,
     DataFrame,
+    DatetimeIndex,
     Index,
     NaT,
     Series,
@@ -796,6 +797,36 @@ class TestDataFrameShift:
         df_shifted = DataFrame(index=shifted_dates)
         result = df.shift(freq=offset)
         tm.assert_frame_equal(result, df_shifted)
+
+    def test_shift_empty_df_with_freq_infer_gh40799(self):
+        # GH#40799: shift(freq='infer') on an empty DataFrame (no columns)
+        # should still shift the index, not return the original unchanged.
+        dates = date_range("2020-01-01", periods=3, freq="D")
+        df = DataFrame(index=dates)
+
+        result = df.shift(1, freq="infer")
+        expected = DataFrame(index=dates.shift(1))
+        tm.assert_frame_equal(result, expected)
+
+        # Also test with freq specified directly for comparison
+        result2 = df.shift(1, freq="D")
+        tm.assert_frame_equal(result2, expected)
+
+    def test_shift_freq_infer_with_inferred_freq(self):
+        # GH#40799: shift(freq='infer') should work when index.freq is None
+        # but index.inferred_freq is not None (DatetimeIndex without explicit freq).
+        # This is the common case when reading from CSV and using to_datetime().
+        dates = DatetimeIndex(
+            ["2020-01-01", "2020-01-02", "2020-01-03"], dtype="datetime64[ns]"
+        )
+        # Verify setup: no explicit freq, but inferred_freq is not None
+        assert dates.freq is None
+        assert dates.inferred_freq is not None
+
+        df = DataFrame({"a": [1, 2, 3]}, index=dates)
+        result = df.shift(1, freq="infer")
+        expected = df.shift(1, freq=dates.inferred_freq)
+        tm.assert_frame_equal(result, expected)
 
     def test_series_shift_interval_preserves_closed(self):
         # GH#60389

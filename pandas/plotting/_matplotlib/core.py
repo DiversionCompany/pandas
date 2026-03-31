@@ -664,6 +664,11 @@ class MPLPlot(ABC):
         ) and isinstance(data.dtype, ExtensionDtype):
             return data.to_numpy(dtype="float", na_value=np.nan)
 
+        # GH39320: convert timedelta values to float (nanoseconds) so
+        # matplotlib can use them as numeric bar/line heights
+        if data.dtype.kind == "m":
+            return data.values.astype("i8").astype(np.float64)
+
         # GH25587: cast ExtensionArray of pandas (IntegerArray, etc.) to
         # np.ndarray before plot.
         if len(data) > 0:

@@ -151,6 +151,12 @@ def mask_missing(arr: ArrayLike, value) -> npt.NDArray[np.bool_]:
                 # GH#47101: 0-D array comparison returns a numpy scalar,
                 # not an ndarray; convert to a 0-D bool array
                 new_mask = np.asarray(new_mask, dtype=bool)
+            elif lib.is_bool(new_mask):
+                # GH#47101: custom array-like objects (e.g. qlist from qpython)
+                # may return a plain Python bool from __eq__. Fall back to
+                # element-wise comparison via numpy to get the correct per-element
+                # mask.
+                new_mask = np.asarray(arr, dtype=object) == value
             else:
                 # usually BooleanArray
                 new_mask = new_mask.to_numpy(dtype=bool, na_value=False)

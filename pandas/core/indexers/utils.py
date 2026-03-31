@@ -157,10 +157,23 @@ def check_setitem_lengths(indexer, value, values) -> bool:
         #  b) boolean indexers e.g. BoolArray
         if is_list_like(value):
             if len(indexer) != len(value) and values.ndim == 1:
+                # GH#26333: a length-1 value is treated as scalar and broadcast,
+                # consistent with numpy's behavior (e.g. arr[bool_mask] = [scalar])
+                if len(value) == 1:
+                    pass  # broadcast single-element as scalar
                 # boolean with truth values == len of the value is ok too
-                if isinstance(indexer, list):
+                elif isinstance(indexer, list):
                     indexer = np.array(indexer)
-                if not (
+                    if not (
+                        isinstance(indexer, np.ndarray)
+                        and indexer.dtype == np.bool_
+                        and indexer.sum() == len(value)
+                    ):
+                        raise ValueError(
+                            "cannot set using a list-like indexer "
+                            "with a different length than the value"
+                        )
+                elif not (
                     isinstance(indexer, np.ndarray)
                     and indexer.dtype == np.bool_
                     and indexer.sum() == len(value)

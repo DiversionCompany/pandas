@@ -5,6 +5,8 @@ from pandas import (
     DataFrame,
     DatetimeIndex,
     Index,
+    Interval,
+    IntervalIndex,
     MultiIndex,
     Series,
     concat,
@@ -182,3 +184,24 @@ class TestSeriesConcat:
         obj = frame_or_series([100])
         result = concat([obj.iloc[::-1]])
         tm.assert_equal(result, obj)
+
+    def test_concat_series_overlapping_interval_names(self):
+        # GH#64825 - concat Series with overlapping Interval names using keys
+        value_index = IntervalIndex.from_tuples([(0.0, 1.0), (1.0, 2.0)], name="foo")
+        level_index = IntervalIndex.from_tuples(
+            [(0.0, 10.0), (0.0, 20.0)], name="bar"
+        )
+
+        values = [
+            Series([1.0, 3.0], name=Interval(0.0, 10.0), index=value_index),
+            Series([5.0, 7.0], name=Interval(0.0, 20.0), index=value_index),
+        ]
+
+        result = concat(values, keys=level_index, levels=[level_index], names=["bar"])
+
+        expected = Series(
+            [1.0, 3.0, 5.0, 7.0],
+            index=MultiIndex.from_product([level_index, value_index]),
+        )
+
+        tm.assert_series_equal(result, expected)

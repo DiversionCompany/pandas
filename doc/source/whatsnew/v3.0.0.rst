@@ -1191,6 +1191,7 @@ Datetimelike
 - Bug in :func:`date_range` where using a negative frequency value would not include all points between the start and end values (:issue:`56147`)
 - Bug in :func:`infer_freq` with a :class:`Series` with :class:`ArrowDtype` timestamp dtype incorrectly raising ``TypeError`` (:issue:`58403`)
 - Bug in :func:`to_datetime` where passing an ``lxml.etree._ElementUnicodeResult`` together with ``format`` raised  ``TypeError``. Now subclasses of ``str`` are handled. (:issue:`60933`)
+- Bug in ``test_dt64arr_cmp_arraylike_invalid`` that failed on Windows with ``tz=tzlocal()`` when the local timezone has a negative UTC offset; the test used nanosecond timestamps near the Unix epoch that caused ``time.localtime`` to fail with a negative timestamp (:issue:`64281`)
 - Bug in :meth:`DataFrame.set_index` where the ``freq`` attribute of a :class:`DatetimeIndex` or :class:`TimedeltaIndex` was lost when setting the index from a datetime/timedelta column (:issue:`42747`)
 - Bug in :func:`tseries.api.guess_datetime_format` would fail to infer time format when "%Y" == "%H%M" (:issue:`57452`)
 - Bug in :func:`tseries.frequencies.to_offset` would fail to parse frequency strings starting with "LWOM" (:issue:`59218`)
@@ -1391,6 +1392,7 @@ Plotting
 - Bug in :meth:`Series.plot` preventing a line and scatter plot from being aligned (:issue:`61005`)
 - Bug in :meth:`Series.plot` with ``kind="pie"`` with :class:`ArrowDtype` (:issue:`59192`)
 - Bug in plotting with a :class:`TimedeltaIndex` with non-nanosecond resolution displaying incorrect labels (:issue:`63237`)
+- Bug in :meth:`DataFrame.plot.bar` and :meth:`DataFrame.plot.barh` raising ``ValueError: x must be a label or position`` when ``x`` is a list of column labels (:issue:`21386`)
 
 Groupby/resample/rolling
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1517,6 +1519,7 @@ Other
 - Bug in :meth:`Series.map` with a ``timestamp[pyarrow]`` dtype or ``duration[pyarrow]`` dtype incorrectly returning all-``NaN`` entries (:issue:`61231`)
 - Bug in :meth:`Series.mode` where an exception was raised when taking the mode with nullable types with no null values in the series. (:issue:`58926`)
 - Bug in :meth:`Series.rank` that doesn't preserve missing values for nullable integers when ``na_option='keep'``. (:issue:`56976`)
+- Bug in ``test_legacy_files`` that raised ``Empty parameter set`` instead of skipping when legacy HDF5 files are not present (e.g. when running tests against an installed wheel without legacy data files) (:issue:`64604`)
 - Bug in :meth:`Series.replace` and :meth:`DataFrame.replace` throwing ``ValueError`` when ``regex=True`` and all NA values. (:issue:`60688`)
 - Bug in :meth:`Series.replace` when the Series was created from an :class:`Index` and Copy-On-Write is enabled (:issue:`61622`)
 - Bug in :meth:`Series.to_string` when series contains complex floats with exponents (:issue:`60405`)

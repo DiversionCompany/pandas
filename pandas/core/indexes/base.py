@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from collections import abc
 from datetime import datetime
-from enum import Enum
+from enum import (
+    Enum,
+    EnumMeta,
+)
 import functools
 from itertools import zip_longest
 import operator
@@ -550,6 +553,12 @@ class Index(IndexOpsMixin, PandasObject):
             raise cls._raise_scalar_data_error(data)
         elif hasattr(data, "__array__"):
             return cls(np.asarray(data), dtype=dtype, copy=copy, name=name)
+        elif isinstance(data, EnumMeta):
+            # GH#54386: Enum classes (e.g. MyIntEnum) are iterable but are
+            # instances of `type`, so is_list_like() returns False for them.
+            # Convert to list of enum members so Index(MyEnum) works like
+            # Index(list(MyEnum)) and DataFrame(columns=MyEnum) is supported.
+            return cls(list(data), dtype=dtype, copy=copy, name=name)
         elif not is_list_like(data) and not isinstance(data, memoryview):
             # 2022-11-16 the memoryview check is only necessary on some CI
             #  builds, not clear why
@@ -865,6 +874,22 @@ class Index(IndexOpsMixin, PandasObject):
         self,
     ) -> libindex.IndexEngine | libindex.ExtensionEngine | libindex.MaskedIndexEngine:
         # For base class (object dtype) we get ObjectEngine
+
+        # GH#64889: For numeric ArrowExtensionArray, use MaskedIndexEngine directly
+        # from self._values before calling _get_engine_target (which now converts
+        # numeric Arrow types to object array to fix get_indexer on target).
+        if (
+            type(self) is Index
+            and isinstance(self._values, ArrowExtensionArray)
+            and is_numeric_dtype(self.dtype)
+            and self.dtype.kind != "O"
+        ):
+            try:
+                return _masked_engines[self._values.dtype.name](self._values)
+            except KeyError:
+                # Not supported yet e.g. decimal
+                pass
+
         target_values = self._get_engine_target()
 
         if isinstance(self._values, ArrowExtensionArray) and self.dtype.kind in "Mm":
@@ -5301,13 +5326,11 @@ class Index(IndexOpsMixin, PandasObject):
             type(self) is Index
             and isinstance(self._values, ExtensionArray)
             and not isinstance(self._values, BaseMaskedArray)
-            and not (
-                isinstance(self._values, ArrowExtensionArray)
-                and is_numeric_dtype(self.dtype)
-                # Exclude decimal
-                and self.dtype.kind != "O"
-            )
         ):
+            # GH#64889: Convert all non-Masked ExtensionArrays (including
+            # ArrowExtensionArray) to object so they can be used as get_indexer
+            # targets by any engine. ArrowExtensionArray numeric types now get
+            # MaskedIndexEngine via the explicit check in _engine instead.
             # TODO(ExtensionIndex): remove special-case, just use self._values
             return self._values.astype(object)
         # GH#53234: convert non-native byte order arrays to native byte order so

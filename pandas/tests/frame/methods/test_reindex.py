@@ -570,6 +570,25 @@ class TestDataFrameSelectReindex:
         )
         tm.assert_frame_equal(result, expected)
 
+    def test_reindex_sparse_new_columns(self):
+        # GH#26123: reindexing a sparse DataFrame with new columns should
+        # preserve the SparseDtype (not produce dense float64 columns)
+        df = DataFrame(
+            {
+                "A": pd.array([1.0, 2.0, 3.0], dtype=pd.SparseDtype("float64", 0.0)),
+                "B": pd.array([4.0, 5.0, 6.0], dtype=pd.SparseDtype("float64", 0.0)),
+            }
+        )
+        result = df.reindex(columns=["A", "B", "C"])
+        # New column 'C' should also be sparse (not dense float64)
+        assert isinstance(result["C"].values, pd.arrays.SparseArray), (
+            f"Expected SparseArray, got {type(result['C'].values).__name__}"
+        )
+        assert result["C"].isna().all()
+        # Existing columns should keep their dtype
+        assert result["A"].dtype == pd.SparseDtype("float64", 0.0)
+        assert result["B"].dtype == pd.SparseDtype("float64", 0.0)
+
     def test_reindex(self, float_frame):
         datetime_series = Series(
             np.arange(30, dtype=np.float64), index=date_range("2020-01-01", periods=30)

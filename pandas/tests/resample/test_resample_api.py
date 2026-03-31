@@ -1019,3 +1019,42 @@ def test_asfreq_respects_origin_with_fixed_freq_all_seconds_equal():
 
     exp = DataFrame({"value": [np.nan, np.nan, np.nan]}, index=exp_idx)
     tm.assert_frame_equal(result, exp)
+
+
+def test_resample_on_count_includes_on_column():
+    # GH#53110: resample(..., on=col).count() should include the `on=` column
+    # in the result with counts of non-null values.
+    dti = date_range("2023-01-01", periods=5, freq="D")
+    df = DataFrame(
+        {
+            "date": dti,
+            "value": [1, 2, None, 4, 5],
+        }
+    )
+    result = df.resample("ME", on="date").count()
+    expected = DataFrame(
+        {"date": [5], "value": [4]},
+        index=pd.DatetimeIndex(["2023-01-31"], freq="ME", name="date"),
+        dtype="int64",
+    )
+    tm.assert_frame_equal(result, expected)
+
+
+def test_resample_on_count_excludes_column_when_explicitly_selected():
+    # GH#53110: when user explicitly selects columns, `on=` column should
+    # not be added to the result.
+    dti = date_range("2023-01-01", periods=5, freq="D")
+    df = DataFrame(
+        {
+            "date": dti,
+            "value": [1, 2, None, 4, 5],
+        }
+    )
+    # Explicit column selection: 'date' should not appear in result
+    result = df.resample("ME", on="date")[["value"]].count()
+    expected = DataFrame(
+        {"value": [4]},
+        index=pd.DatetimeIndex(["2023-01-31"], freq="ME", name="date"),
+        dtype="int64",
+    )
+    tm.assert_frame_equal(result, expected)

@@ -1570,6 +1570,53 @@ class TestDataFrameReplaceRegex:
             assert len(df._mgr.blocks) == 1
 
 
+def test_replace_arbitrary_python_objects():
+    # GH#36522 - replacing arbitrary Python objects (not int/str/None)
+    # should work without raising TypeError
+    o1 = object()
+    o2 = object()
+    o3 = object()
+
+    df = DataFrame([{"a": o1, "b": o2}, {"a": o2, "b": o1}])
+    result = df.replace(to_replace={"a": o1}, value={"a": o3})
+    # Column "a": first row replaced o1 -> o3, second row o2 stays
+    # Column "b": unchanged
+    assert result.at[0, "a"] is o3
+    assert result.at[1, "a"] is o2
+    assert result.at[0, "b"] is o2
+    assert result.at[1, "b"] is o1
+
+    # Direct Series.replace with arbitrary Python objects
+    ser = Series([o1, o2, o1])
+    result_ser = ser.replace(o1, o3)
+    assert result_ser.iloc[0] is o3
+    assert result_ser.iloc[1] is o2
+    assert result_ser.iloc[2] is o3
+
+
+def test_replace_custom_class_objects():
+    # GH#36522 - replacing custom class instances should work
+    class Foo:
+        def __init__(self, val):
+            self.val = val
+
+        def __eq__(self, other):
+            return isinstance(other, Foo) and self.val == other.val
+
+    f1 = Foo(1)
+    f2 = Foo(2)
+    f3 = Foo(3)
+
+    df = DataFrame({"a": [f1, f2], "b": [f2, f1]})
+    result = df.replace(to_replace={"a": f1}, value={"a": f3})
+    # f1 in column "a" should be replaced with f3
+    assert result.at[0, "a"] is f3
+    assert result.at[1, "a"] is f2
+    # Column "b" should be unchanged
+    assert result.at[0, "b"] is f2
+    assert result.at[1, "b"] is f1
+
+
 def test_mask_missing_zero_d_array_gh47101():
     # GH#47101: mask_missing raised AttributeError: 'bool' object has no
     # attribute 'to_numpy' when arr is a 0-D numpy array, because arr == value
@@ -1596,3 +1643,30 @@ def test_mask_missing_zero_d_array_gh47101():
     result4 = mask_missing(arr_int, 3)
     assert isinstance(result4, np.ndarray)
     assert bool(result4) is False
+
+
+def test_mask_missing_python_bool_from_eq_gh47101():
+    # GH#47101: when arr.__eq__(value) returns a plain Python bool (e.g. from
+    # custom array-like objects like qpython's qlist), mask_missing raised:
+    #   AttributeError: 'bool' object has no attribute 'to_numpy'
+    # The fix falls back to element-wise comparison via numpy.
+    from pandas.core.missing import mask_missing
+
+    # Simulate a custom array-like whose __eq__ returns a Python bool scalar
+    # (not an ndarray). This mimics qpython's qlist behavior.
+    class BoolReturningArray(np.ndarray):
+        """ndarray subclass that returns a Python bool from __eq__."""
+
+        def __eq__(self, other):
+            return bool(np.all(super().__eq__(other)))
+
+    arr = np.array([True, True, False, False]).view(BoolReturningArray)
+
+    # arr == False returns Python bool False (not all elements are False)
+    # mask_missing should fall back to element-wise comparison and correctly
+    # identify the False positions.
+    result = mask_missing(arr, False)
+    assert isinstance(result, np.ndarray)
+    assert result.shape == (4,)
+    expected = np.array([False, False, True, True])
+    tm.assert_numpy_array_equal(result, expected)

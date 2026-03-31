@@ -371,9 +371,10 @@ class TestDataFrameFormatting:
             assert "<td>5</td>" in df._repr_html_()
 
         with option_context("display.max_rows", 10, "display.min_rows", 12):
-            # when set value higher as max_rows, use the minimum
-            assert "5    5" not in repr(df)
-            assert "<td>5</td>" not in df._repr_html_()
+            # GH#64824: when min_rows > max_rows, use min_rows when truncating
+            # so min_rows=12 means show 12 rows (6 top + 6 bottom)
+            assert "5    5" in repr(df)
+            assert "<td>5</td>" in df._repr_html_()
 
         with option_context("display.max_rows", None, "display.min_rows", 12):
             # max_rows of None -> never truncate
@@ -1349,12 +1350,16 @@ class TestDataFrameFormatting:
             (100, 60, 10, 10),  # same
             (60, 60, 10, 60),  # edge case
             (61, 60, 10, 10),  # edge case
+            # GH#64824: min_rows > max_rows should use min_rows when truncating
+            (50, 10, 30, 30),  # max_rows < len(frame), min_rows > max_rows
+            (100, 5, 20, 20),  # min_rows > max_rows, should use min_rows
         ],
     )
     def test_max_rows_fitted(self, length, min_rows, max_rows, expected):
         """Check that display logic is correct.
 
         GH #37359
+        GH #64824
 
         See description here:
         https://pandas.pydata.org/docs/dev/user_guide/options.html#frequently-used-options
@@ -1366,6 +1371,24 @@ class TestDataFrameFormatting:
         )
         result = formatter.max_rows_fitted
         assert result == expected
+
+
+def test_dataframe_to_string_min_rows_greater_than_max_rows():
+    # GH#64824: when min_rows > max_rows, to_string should show min_rows rows
+    # in the truncated repr, not min(min_rows, max_rows) rows
+    df = DataFrame({"a": range(100)})
+
+    # max_rows=5 means truncate when len > 5
+    # min_rows=10 means show 10 rows in the truncated repr
+    result = df.to_string(max_rows=5, min_rows=10)
+    lines = [l for l in result.split("\n") if l.strip() and ".." not in l]
+    # Should show 10 data rows (5 top + 5 bottom), not 5 (old incorrect behavior)
+    assert len(lines) - 1 == 10  # -1 for header
+
+    # Also verify: min_rows < max_rows still works correctly
+    result2 = df.to_string(max_rows=10, min_rows=4)
+    lines2 = [l for l in result2.split("\n") if l.strip() and ".." not in l]
+    assert len(lines2) - 1 == 4
 
 
 def gen_series_formatting():
@@ -1887,8 +1910,8 @@ class TestSeriesFormatting:
             assert "5      5" in repr(s)
 
         with option_context("display.max_rows", 10, "display.min_rows", 12):
-            # when set value higher as max_rows, use the minimum
-            assert "5      5" not in repr(s)
+            # GH#64824: when min_rows > max_rows, use min_rows when truncating
+            assert "5      5" in repr(s)
 
         with option_context("display.max_rows", None, "display.min_rows", 12):
             # max_rows of None -> never truncate
@@ -2300,3 +2323,23 @@ def test_filepath_or_buffer_bad_arg_raises(float_frame, method):
     msg = "buf is not a file name and it has no write method"
     with pytest.raises(TypeError, match=msg):
         getattr(float_frame, method)(buf=object())
+
+
+def test_display_width_respected_for_wide_second_column():
+    # GH#21337: When display.width is set to a large value, the DataFrame
+    # should not show "..." (ellipsis) for rows even when the wide column
+    # comes second (after a narrow column).
+    d = [
+        ["Penicilline G", "CC1(C(N2C(S1)C(C2=O)NC(=O)CC3=CC=CC=C3)C(=O)O)C"],
+        ["Tetracycline", "CC1(C2CC3C(C(=O)C(=C(C3(C(=O)C2=C(C4=C1C=CC=C4O)O)O)O)C(=O)N)N(C)C)O"],
+        ["Ampicilline", "CC1(C(N2C(S1)C(C2=O)NC(=O)C(C3=CC=CC=C3)N)C(=O)O)C"],
+    ]
+    df = DataFrame(d, columns=["Name", "Smiles"])
+
+    with pd.option_context("display.width", 10000, "display.max_colwidth", 10000):
+        result = df.to_string()
+
+    # None of the rows should be truncated to "..."
+    assert "..." not in result
+    # All the long SMILES strings should appear in full
+    assert "CC1(C2CC3C(C(=O)C(=C(C3(C(=O)C2=C(C4=C1C=CC=C4O)O)O)O)C(=O)N)N(C)C)O" in result

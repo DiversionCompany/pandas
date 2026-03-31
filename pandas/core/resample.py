@@ -1931,6 +1931,25 @@ class Resampler(BaseGroupBy, PandasObject):
                     [], index=result.index, columns=result.columns, dtype="int64"
                 )
 
+        # GH#53110: When `on=` is specified, the key column is excluded from
+        # aggregation (to avoid errors from aggregating datetime columns).
+        # However, `count` is always valid for any column type, so we add the
+        # count of the `on=` column back into the result when no explicit
+        # column selection was made.
+        if (
+            self._timegrouper.key is not None
+            and self._selection is None
+            and self._selected_obj.ndim == 2
+            and isinstance(result, ABCDataFrame)
+        ):
+            key = self._timegrouper.key
+            # Count non-null values in the `on=` column for each period.
+            # Since we resample ON this column, all rows have a non-null value,
+            # so this equals the number of rows per period.
+            on_count = self.obj[key].groupby(self._grouper).count()
+            on_count.name = key
+            result.insert(0, key, on_count)
+
         return result
 
     @final

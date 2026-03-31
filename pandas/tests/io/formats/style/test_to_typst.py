@@ -125,3 +125,35 @@ def test_hidden_rows(styler):
     )"""
     )
     assert result == expected
+
+
+def test_hidden_index_axis(styler):
+    # GH#64663 - hiding entire index axis should not create empty cells
+    result = styler.hide(axis="index").to_typst()
+    expected = dedent(
+        """\
+    #table(
+      columns: 3,
+      [A], [B], [C],
+
+      [0], [-0.61], [ab],
+      [1], [-1.22], [cd],
+    )"""
+    )
+    assert result == expected
+
+
+def test_hidden_index_and_columns(styler):
+    # GH#64663 - hiding index axis and some columns should work together
+    result = styler.hide(axis="index").hide(subset=["B"], axis="columns").to_typst()
+    expected = dedent(
+        """\
+    #table(
+      columns: 2,
+      [A], [C],
+
+      [0], [ab],
+      [1], [cd],
+    )"""
+    )
+    assert result == expected

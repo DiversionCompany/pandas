@@ -972,7 +972,12 @@ def _make_concat_multiindex(indexes, keys, levels=None, names=None) -> MultiInde
 
     for hlevel, level in zip(zipped, levels, strict=True):
         hlevel_index = ensure_index(hlevel)
-        mapped = level.get_indexer(hlevel_index)
+        # GH#64825: use get_indexer_non_unique for overlapping IntervalIndex
+        # (and any other index that does not support get_indexer)
+        if not level._index_as_unique:
+            mapped, _ = level.get_indexer_non_unique(hlevel_index)
+        else:
+            mapped = level.get_indexer(hlevel_index)
 
         mask = mapped == -1
         if mask.any():

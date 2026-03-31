@@ -1979,3 +1979,25 @@ def test_getitem_enum_column():
     result = df3[Col.A]
     expected = Series([1, 2], name=Col.A)
     tm.assert_series_equal(result, expected)
+
+
+def test_dataframe_columns_enum_class():
+    # GH#54386: Using an Enum class as `columns` argument should work,
+    # iterating over the enum members as column names.
+    # Previously raised: TypeError: Index(...) must be called with a collection
+    from enum import IntEnum
+
+    class MyEnum(IntEnum):
+        FIRST = 1
+        SECOND = 2
+        THIRD = 3
+
+    # Creating DataFrame with Enum class as columns
+    df = DataFrame(columns=MyEnum)
+    assert list(df.columns) == list(MyEnum)
+    assert len(df) == 0
+
+    # Creating DataFrame with data using Enum class as columns
+    row = DataFrame({e: [e.value + 1] for e in MyEnum}, columns=MyEnum)
+    assert list(row.columns) == list(MyEnum)
+    assert row.iloc[0][MyEnum.FIRST] == 2

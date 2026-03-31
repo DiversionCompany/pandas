@@ -199,6 +199,17 @@ class TestSeriesReplace:
         tm.assert_series_equal(result, expected)
         assert isinstance(result[0], float) and np.isnan(result[0])
 
+    def test_replace_object_series_mixed_timestamps_preserves_nan(self):
+        # GH#48034: original issue case - object dtype Series with mixed Timestamps
+        # and np.nan; replace with regex=True should not convert np.nan to NaT
+        s1 = pd.Series([pd.Timestamp(1000223), np.nan], dtype=object)
+        # With regex=True - np.nan should stay as np.nan (not converted to NaT)
+        a1 = s1.replace("abcdef", pd.NaT, regex=True)
+        a2 = s1.replace("abcdef", pd.NaT, regex=False)
+        # Both cases should have np.nan, not pd.NaT, at index 1
+        assert isinstance(a1[1], float) and np.isnan(a1[1])
+        assert isinstance(a2[1], float) and np.isnan(a2[1])
+
     def test_replace_nat_with_tz(self):
         # GH 11792: Test with replacing NaT in a list with tz data
         ts = pd.Timestamp("2015/01/01", tz="UTC")

@@ -585,6 +585,11 @@ class DataFrame(NDFrame, OpsMixin):
                     data = np.asarray(data)
                 else:
                     data = list(data)
+            elif not isinstance(data, (list, np.ndarray)):
+                # GH#41682: UserList and other non-list Sequences need to be
+                # converted to a plain list so that downstream processing
+                # (e.g. maybe_convert_platform) handles them correctly.
+                data = list(data)
             if len(data) > 0:
                 if is_dataclass(data[0]):
                     data = dataclasses_to_dicts(data)

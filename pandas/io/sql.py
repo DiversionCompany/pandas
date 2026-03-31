@@ -163,6 +163,12 @@ def _convert_arrays_to_dataframe(
     coerce_float: bool = True,
     dtype_backend: DtypeBackend | Literal["numpy"] = "numpy",
 ) -> DataFrame:
+    # GH#53028: DBAPI2 cursors with dict-based row factories (e.g. pymysql
+    # DictCursor) return rows as dicts rather than tuples/lists.  Convert
+    # each dict to an ordered tuple using the column names derived from
+    # cursor.description so that lib.to_object_array_tuples works correctly.
+    if data and isinstance(data[0], dict):
+        data = [tuple(row[col] for col in columns) for row in data]
     content = lib.to_object_array_tuples(data)
     idx_len = content.shape[0]
     arrays = convert_object_array(

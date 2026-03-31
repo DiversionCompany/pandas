@@ -245,3 +245,16 @@ class TestDataFrameIsIn:
         result = x.isin(y)
         expected = DataFrame([[True, True], [True, True]])
         tm.assert_frame_equal(result, expected)
+
+    def test_isin_with_none_exact_issue_reproduction(self):
+        # GH#35565: exact reproduction from the issue
+        # x.isin(y) where y=x[1] and x contains None should return True
+        # at the position where both x and y have None
+        x = DataFrame([["foo", "bar"], [1, None]])
+        y = x[1].copy()
+
+        result = x.isin(y)
+        # Column 1 contains 'bar' and None; y also contains 'bar' and None
+        # Both should be True in column 1
+        assert result.iloc[0, 1] is True  # 'bar' in ['bar', None]
+        assert result.iloc[1, 1] is True  # None in ['bar', None] (None matches None)

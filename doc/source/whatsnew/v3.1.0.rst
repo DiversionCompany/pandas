@@ -277,6 +277,7 @@ Plotting
 - Bug in :meth:`DataFrame.plot` and :meth:`Series.plot` where a :class:`DatetimeIndex` with a backwards (descending) time order raised a ``ValueError: Frequency must be positive`` (:issue:`64819`)
 - Bug in :meth:`DataFrame.plot` where plotting with a :class:`TimedeltaIndex` would show tick marks at positions not corresponding to the actual index values, resulting in missing or misaligned axis labels (:issue:`18910`)
 - Bug in :meth:`Series.plot.bar` (and :meth:`DataFrame.plot.bar`) where a :class:`Series` with timedelta dtype values raised a ``TypeError``; timedelta values are now converted to float (nanoseconds) before plotting (:issue:`39320`)
+- Bug in :meth:`DataFrame.plot.bar` and :meth:`DataFrame.plot.barh` where passing a list of column labels for the ``x`` parameter raised a ``TypeError``; multi-column categories are now supported (:issue:`21386`)
 -
 
 Groupby/resample/rolling

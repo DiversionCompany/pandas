@@ -162,6 +162,7 @@ Datetimelike
 - Bug in :func:`to_datetime` and :func:`to_timedelta` where ``uint64`` values greater than ``int64`` max silently overflowed instead of raising :class:`OutOfBoundsDatetime` or :class:`OutOfBoundsTimedelta` (:issue:`60677`)
 - Bug in :meth:`DatetimeArray.isin` and :meth:`TimedeltaArray.isin` where mismatched resolutions could silently truncate finer-resolution values, leading to false matches (:issue:`64545`)
 - Bug in :func:`bdate_range` returning one fewer period than requested when ``end`` falls on a non-business day (e.g. a weekend) and ``periods`` is specified without ``start`` (:issue:`64834`)
+- Bug in :class:`~pandas.tseries.offsets.Second` (and other :class:`~pandas.tseries.offsets.Tick` subclasses) where dividing by a scalar integer or float truncated to the tick's native resolution instead of preserving sub-unit precision; e.g. ``Second(10) / 3`` now correctly returns ``Nano(3_333_333_333)`` and ``Second(1) / 2`` returns ``Milli(500)`` (:issue:`57264`)
 
 Timedelta
 ^^^^^^^^^

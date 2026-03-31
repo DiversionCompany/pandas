@@ -268,6 +268,34 @@ def test_tick_division(cls):
         assert result._as_pd_timedelta == off._as_pd_timedelta / 0.001
 
 
+def test_tick_division_precision_gh57264():
+    # GH#57264: dividing a Tick by a scalar should preserve sub-unit precision
+    # using nanosecond resolution instead of truncating to the native unit.
+
+    # Second(10) / 3 should give Nano(3_333_333_333), not Second(3)
+    result = Second(10) / 3
+    expected = Nano(3_333_333_333)
+    assert result == expected
+    assert isinstance(result, Nano)
+
+    # Second(10) / 2 still fits exactly in Seconds
+    result2 = Second(10) / 2
+    expected2 = Second(5)
+    assert result2 == expected2
+    assert isinstance(result2, Second)
+
+    # Second(1) / 2 should give Milli(500), not Day(0)
+    result3 = Second(1) / 2
+    expected3 = Milli(500)
+    assert result3 == expected3
+    assert isinstance(result3, Milli)
+
+    # float divisor: Second(10) / 3.0 same as integer case
+    result4 = Second(10) / 3.0
+    assert result4 == expected
+    assert isinstance(result4, Nano)
+
+
 def test_tick_mul_float():
     off = Micro(2)
 

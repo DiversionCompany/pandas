@@ -4132,3 +4132,26 @@ def test_large_string_radd_scalar(arrow_type):
     )
     tm.assert_series_equal(result, expected)
     assert result.unit == unit
+
+
+@pytest.mark.parametrize(
+    "arrow_type",
+    [pa.string(), pa.large_string()],
+)
+def test_posixpath_truediv_arrow_string_series(arrow_type):
+    # GH#63832 - Path / arrow_string_series should work without ArrowInvalid error
+    from pathlib import Path
+
+    home = Path("/home/user")
+    suff1 = pd.Series(["a", "b"])
+    suff2 = pd.Series(["c", "d"], dtype=ArrowDtype(arrow_type))
+
+    # home / suff1 returns object dtype Series of PosixPath values
+    step1 = home / suff1
+    # step1 / suff2 should not raise ArrowInvalid
+    result = step1 / suff2
+
+    expected = pd.Series(
+        [str(home / "a" / "c"), str(home / "b" / "d")], dtype=ArrowDtype(arrow_type)
+    )
+    tm.assert_series_equal(result, expected)

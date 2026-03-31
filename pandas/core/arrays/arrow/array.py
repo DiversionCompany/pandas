@@ -6,6 +6,7 @@ from datetime import (
 )
 import functools
 import operator
+import os
 from pathlib import Path
 import re
 import textwrap
@@ -692,6 +693,19 @@ class ArrowExtensionArray(
                 pa_array = pa.array(value, type=pa_type, mask=mask)
             except (pa.ArrowInvalid, pa.ArrowTypeError):
                 # GH50430: let pyarrow infer type, then cast
+                # GH63832: if target type is string-like, convert os.PathLike
+                # objects to their string representation before converting
+                if pa_type is not None and (
+                    pa.types.is_string(pa_type) or pa.types.is_large_string(pa_type)
+                ):
+                    seq = value.tolist() if isinstance(value, np.ndarray) else value
+                    if any(isinstance(x, os.PathLike) for x in seq):
+                        seq = [
+                            os.fspath(x) if isinstance(x, os.PathLike) else x
+                            for x in seq
+                        ]
+                        pa_array = pa.array(seq, type=pa_type, mask=mask)
+                        return pa_array
                 pa_array = pa.array(value, mask=mask)
 
             if pa_type is None and pa.types.is_duration(pa_array.type):

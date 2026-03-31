@@ -213,6 +213,7 @@ Conversion
 Strings
 ^^^^^^^
 - Bug in :class:`~pandas.arrays.ArrowExtensionArray` where constructing a string array from a list containing ``np.nan`` values raised an ``ArrowTypeError`` (:issue:`64578`)
+- Bug in :class:`~pandas.arrays.ArrowExtensionArray` where dividing an ``object``-dtype :class:`Series` containing :class:`pathlib.Path` values by an Arrow string-dtype :class:`Series` raised ``ArrowInvalid`` (:issue:`63832`)
 - Bug in :meth:`DataFrame.eval` and :func:`eval` where ``'substring' in column`` did not perform string substring containment for string-dtype columns, instead performing element membership testing; now matches Python's ``in`` operator semantics for strings (:issue:`64391`)
 - Bug in :meth:`DataFrame.where` where passing a ``list`` as ``other`` on a :class:`~pandas.StringDtype` DataFrame returned ``object`` dtype instead of preserving :class:`~pandas.StringDtype` (:issue:`63842`)
 -

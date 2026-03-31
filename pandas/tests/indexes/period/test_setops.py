@@ -348,6 +348,15 @@ class TestPeriodIndex:
         expected = period_range("2022-01-01", "2022-01-04", freq="D")
         tm.assert_index_equal(result, expected)
 
+    def test_difference_subset_overlap(self):
+        # GH#58971 - Index.difference returning too many values when only a
+        # subset of the original index overlaps with the subtracted index
+        index1 = period_range("2022-01-01", "2022-01-10", freq="D")
+        index2 = period_range("2022-01-01", "2022-01-05", freq="D")
+        result = index1.difference(index2)
+        expected = period_range("2022-01-06", "2022-01-10", freq="D")
+        tm.assert_index_equal(result, expected)
+
     @pytest.mark.filterwarnings(r"ignore:PeriodDtype\[B\] is deprecated:FutureWarning")
     def test_union_duplicates(self):
         # GH#36289

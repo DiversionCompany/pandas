@@ -572,6 +572,20 @@ def test_round_trip_interval_column(temp_h5_path):
     tm.assert_frame_equal(result, df_with_col)
 
 
+@pytest.mark.filterwarnings("ignore::pandas.errors.PerformanceWarning")
+def test_round_trip_interval_index_closed_both(temp_h5_path):
+    # GH#38305 - IntervalIndex with closed='both' should round-trip correctly
+    data = DataFrame({"val": [10, 20]})
+    data.index = pd.IntervalIndex.from_arrays([1, 3], [2, 4], closed="both")
+
+    data.to_hdf(temp_h5_path, key="df")
+    result = read_hdf(temp_h5_path, "df")
+
+    tm.assert_frame_equal(result, data)
+    assert isinstance(result.index, pd.IntervalIndex)
+    assert result.index.closed == "both"
+
+
 def test_round_trip_equals(temp_h5_path):
     # GH 9330
     df = DataFrame({"B": [1, 2], "A": ["x", "y"]})

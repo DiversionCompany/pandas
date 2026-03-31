@@ -75,9 +75,9 @@ class TestIntervalIndexRendering:
                 ],
                 "both",
                 [
-                    "[2018-01-01 00:00:00, 2018-01-02 00:00:00]",
+                    "[2018-01-01, 2018-01-02]",
                     "NaN",
-                    "[2018-01-02 00:00:00, 2018-01-03 00:00:00]",
+                    "[2018-01-02, 2018-01-03]",
                 ],
             ),
             (
@@ -114,18 +114,16 @@ class TestIntervalIndexRendering:
         )
         assert result == expected
 
-    def test_timestamp_always_shows_time_components(self):
-        # GH#57748: Interval repr should always show HH:MM:SS for Timestamps
-        # even when the time is midnight (00:00:00)
+    def test_timestamp_midnight_omits_time_components(self):
+        # GH#57748: Interval repr should omit HH:MM:SS for tz-naive Timestamps
+        # when both endpoints are at midnight (00:00:00)
         i = Interval(Timestamp("2020-01-01"), Timestamp("2020-01-02"))
-        # __str__ should always include time components
-        assert str(i) == "(2020-01-01 00:00:00, 2020-01-02 00:00:00]"
-        # __repr__ should always include time components
-        assert repr(i) == (
-            "Interval(2020-01-01 00:00:00, 2020-01-02 00:00:00, closed='right')"
-        )
+        # __str__ should omit time components when both are at midnight
+        assert str(i) == "(2020-01-01, 2020-01-02]"
+        # __repr__ should omit time components when both are at midnight
+        assert repr(i) == "Interval(2020-01-01, 2020-01-02, closed='right')"
 
-    def test_timestamp_with_time_always_shows_time_components(self):
+    def test_timestamp_with_time_shows_time_components(self):
         # GH#57748: Interval repr for Timestamps with non-midnight time
         i = Interval(
             Timestamp("2020-01-01 12:30:00"), Timestamp("2020-01-02 18:45:00")
@@ -133,4 +131,13 @@ class TestIntervalIndexRendering:
         assert str(i) == "(2020-01-01 12:30:00, 2020-01-02 18:45:00]"
         assert repr(i) == (
             "Interval(2020-01-01 12:30:00, 2020-01-02 18:45:00, closed='right')"
+        )
+
+    def test_timestamp_mixed_time_shows_time_for_both(self):
+        # GH#57748: When one endpoint has non-zero time, show time for both
+        # to maintain consistent formatting within the interval
+        i = Interval(Timestamp("2020-01-01"), Timestamp("2020-01-01 12:30:00"))
+        assert str(i) == "(2020-01-01 00:00:00, 2020-01-01 12:30:00]"
+        assert repr(i) == (
+            "Interval(2020-01-01 00:00:00, 2020-01-01 12:30:00, closed='right')"
         )

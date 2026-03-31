@@ -527,28 +527,62 @@ cdef class Interval(IntervalMixin):
         args = (self.left, self.right, self.closed)
         return (type(self), args)
 
-    def _endpoint_repr(self, endpoint) -> str:
-        # GH#57748: For Timestamps, always include HH:MM:SS components to
-        # avoid ambiguity. Use isoformat with space separator to get a
-        # consistent format that includes timezone offset when present.
+    def _endpoint_repr(self, endpoint, include_time: bool = True) -> str:
+        # GH#57748: For Timestamps, use isoformat with space separator to get
+        # a consistent format that includes timezone offset when present.
+        # Only include HH:MM:SS components when needed (see __str__/__repr__).
         if isinstance(endpoint, _Timestamp):
-            return endpoint.isoformat(sep=" ")
+            if include_time or endpoint.tzinfo is not None:
+                return endpoint.isoformat(sep=" ")
+            else:
+                # Show only date portion for tz-naive Timestamps at midnight
+                return endpoint._date_repr
         elif isinstance(endpoint, (_Timedelta, np.generic)):
             return str(endpoint)
         return repr(endpoint)
 
+    def _timestamp_has_time(self, endpoint) -> bool:
+        """Return True if a Timestamp endpoint has any non-zero time components."""
+        if isinstance(endpoint, _Timestamp):
+            return bool(
+                endpoint.hour
+                or endpoint.minute
+                or endpoint.second
+                or endpoint.microsecond
+                or endpoint._nanosecond
+            )
+        return False
+
     def __repr__(self) -> str:
-        left = self._endpoint_repr(self.left)
-        right = self._endpoint_repr(self.right)
+        # GH#57748: Only show HH:MM:SS when at least one endpoint has
+        # non-zero time components; otherwise show date only for tz-naive
+        # Timestamps at midnight.
+        include_time = (
+            self._timestamp_has_time(self.left)
+            or self._timestamp_has_time(self.right)
+            if isinstance(self.left, _Timestamp)
+            else True
+        )
+        left = self._endpoint_repr(self.left, include_time=include_time)
+        right = self._endpoint_repr(self.right, include_time=include_time)
         name = type(self).__name__
         repr_str = f"{name}({left}, {right}, closed={repr(self.closed)})"
         return repr_str
 
     def __str__(self) -> str:
+        # GH#57748: Only show HH:MM:SS when at least one endpoint has
+        # non-zero time components; otherwise show date only for tz-naive
+        # Timestamps at midnight.
+        include_time = (
+            self._timestamp_has_time(self.left)
+            or self._timestamp_has_time(self.right)
+            if isinstance(self.left, _Timestamp)
+            else True
+        )
         start_symbol = "[" if self.closed_left else "("
         end_symbol = "]" if self.closed_right else ")"
-        left = self._endpoint_repr(self.left)
-        right = self._endpoint_repr(self.right)
+        left = self._endpoint_repr(self.left, include_time=include_time)
+        right = self._endpoint_repr(self.right, include_time=include_time)
         return f"{start_symbol}{left}, {right}{end_symbol}"
 
     def __add__(self, y):

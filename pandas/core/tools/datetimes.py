@@ -366,10 +366,15 @@ def _convert_listlike_datetimes(
     tz = "utc" if utc else None
     if isinstance(arg_dtype, DatetimeTZDtype):
         if not isinstance(arg, (DatetimeArray, DatetimeIndex)):
-            return DatetimeIndex(arg, tz=tz, name=name)
-        if utc:
-            arg = arg.tz_convert(None).tz_localize("utc")
-        return arg
+            result = DatetimeIndex(arg, tz=tz, name=name)
+        elif utc:
+            result = arg.tz_convert(None).tz_localize("utc")
+        else:
+            result = arg
+        # GH#64012: recast to requested unit if unit is specified
+        if unit is not None:
+            result = result.as_unit(unit)
+        return result
 
     elif isinstance(arg_dtype, ArrowDtype) and arg_dtype.type is Timestamp:
         # TODO: Combine with above if DTI/DTA supports Arrow timestamps
@@ -399,12 +404,17 @@ def _convert_listlike_datetimes(
             )
 
         if not isinstance(arg, (DatetimeArray, DatetimeIndex)):
-            return DatetimeIndex(arg, tz=tz, name=name)
+            result = DatetimeIndex(arg, tz=tz, name=name)
         elif utc:
             # DatetimeArray, DatetimeIndex
-            return arg.tz_localize("utc")
+            result = arg.tz_localize("utc")
+        else:
+            result = arg
 
-        return arg
+        # GH#64012: recast to requested unit if unit is specified
+        if unit is not None:
+            result = result.as_unit(unit)
+        return result
 
     elif unit is not None:
         if format is not None:

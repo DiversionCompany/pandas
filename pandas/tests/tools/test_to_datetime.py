@@ -2110,6 +2110,24 @@ class TestToDatetimeUnit:
         expected = to_datetime(arr.astype(np.int64), unit="ns")
         tm.assert_index_equal(result, expected)
 
+    @pytest.mark.parametrize("unit", ["s", "ms", "us", "ns"])
+    def test_to_datetime_unit_with_datetimeindex(self, unit):
+        # GH#64012: to_datetime should recast units when passing a DatetimeIndex
+        dti = DatetimeIndex(["2021-01-01", "2021-01-02"], dtype="datetime64[ns]")
+        result = to_datetime(dti, unit=unit)
+        expected = dti.as_unit(unit)
+        tm.assert_index_equal(result, expected)
+
+    @pytest.mark.parametrize("unit", ["s", "ms", "us", "ns"])
+    def test_to_datetime_unit_with_datetimeindex_tz(self, unit):
+        # GH#64012: to_datetime should recast units when passing a tz-aware DatetimeIndex
+        dti = DatetimeIndex(
+            ["2021-01-01", "2021-01-02"], dtype="datetime64[ns]", tz="UTC"
+        )
+        result = to_datetime(dti, unit=unit)
+        expected = dti.as_unit(unit)
+        tm.assert_index_equal(result, expected)
+
 
 class TestToDatetimeDataFrame:
     @pytest.fixture

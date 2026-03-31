@@ -2051,6 +2051,19 @@ def test_eval_string_containment():
     tm.assert_series_equal(result_all_match, expected_all_match)
 
 
+@pytest.mark.parametrize("dtype", ["object", "string"])
+def test_eval_string_containment_dtypes(dtype):
+    # GH#64391: string containment in eval should work for both object dtype
+    # and pandas StringDtype.
+    df = DataFrame({"col": Series(["hello", "world", "foo"], dtype=dtype)})
+    result = df.eval("'ello' in col")
+    expected = df["col"].str.contains("ello", regex=False)
+    tm.assert_series_equal(result, expected)
+
+    result_not = df.eval("'ello' not in col")
+    tm.assert_series_equal(result_not, ~expected)
+
+
 def test_method_calls_on_binop():
     # GH 61175
     x = Series([1, 2, 3, 5])

@@ -93,3 +93,20 @@ class TestAstype:
         expected = Index([1.0, np.nan, 0.2], dtype=np.float64)
         assert result.dtype == expected.dtype
         tm.assert_index_equal(result, expected)
+
+    def test_astype_numpy_string_dtype(self):
+        # GH#50127: Index.astype(<numpy string dtype>) should not raise
+        # NotImplementedError. Result dtype should be object (pandas does not
+        # store numpy str/U dtypes internally).
+        idx = Index([1, 2, 3])
+        for str_dtype in [np.str_, np.dtype("U"), np.dtype("U10"), "U10"]:
+            result = idx.astype(str_dtype)
+            assert result.dtype == object, (
+                f"astype({str_dtype!r}) should give object dtype, got {result.dtype}"
+            )
+            tm.assert_index_equal(result, Index(["1", "2", "3"], dtype=object))
+
+        # Also verify on float Index
+        idx_float = Index([1.0, 2.0, 3.0])
+        result = idx_float.astype(np.str_)
+        assert result.dtype == object

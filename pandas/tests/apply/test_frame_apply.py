@@ -1946,3 +1946,13 @@ def test_apply_empty_with_raw_false():
     assert all(t == "Series" for t in call_types), (
         f"Empty raw=False probe should pass Series, got: {call_types}"
     )
+
+
+def test_apply_empty_dataframe_setitem():
+    # GH#41997: The exact regression case - applying on empty DataFrame
+    # and assigning the result to a column should not raise ValueError.
+    df = DataFrame(columns=["a", "b"])
+    # Should not raise ValueError: Columns must be same length as key
+    df["a"] = df.apply(lambda x: x["a"], axis=1)
+    assert len(df) == 0
+    assert "a" in df.columns

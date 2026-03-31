@@ -150,6 +150,7 @@ Performance improvements
 Bug fixes
 ~~~~~~~~~
 - Bug in object-dtype hash table operations (``factorize``, ``unique``, ``duplicated``, ``isin``, ``value_counts``, ``groupby``, ``Index.get_loc``) not distinguishing between ``int`` and ``bool`` values, e.g. treating ``0`` and ``False`` as equal (:issue:`62888`)
+- Bug in :meth:`DataFrame.isin` when ``values`` is a :class:`Series` or :class:`DataFrame` containing ``None``/``NaN`` values: ``None``/``NaN`` in the DataFrame was not recognized as being contained in ``values`` even when the aligned position in ``values`` was also ``None``/``NaN`` (:issue:`35565`)
 - Fix bug in :func:`to_datetime` that could give an unnecessary ``RuntimeWarning`` when converting DataFrame containing missing values (:issue:`64141`)
 
 Categorical

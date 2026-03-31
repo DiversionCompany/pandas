@@ -1417,3 +1417,29 @@ def test_groupby_rolling_on_dataframe_index_consistent_with_series():
     )
     tm.assert_index_equal(result_series.index, expected_index)
     tm.assert_index_equal(result_df.index, expected_index)
+
+
+def test_groupby_rolling_on_consistent_index_original_issue():
+    # GH#43405 - exact case from original issue report
+    df = DataFrame(
+        {
+            "id": ["a", "a", "b", "b", "b"],
+            "timestamp": date_range("2021-9-1", periods=5, freq="h"),
+            "y": range(5),
+        }
+    )
+    grp = df.groupby("id").rolling("1h", on="timestamp")
+
+    # DataFrame result and Series result should both use timestamp values
+    # (not integer positions) as the second level of the MultiIndex
+    df_result = grp.count()
+    series_result = grp["y"].count()
+
+    # Both should use timestamp values as second MultiIndex level
+    assert df_result.index.names == ["id", "timestamp"]
+    assert series_result.index.names == ["id", "timestamp"]
+
+    # Second level should contain timestamp values, not integer positions
+    df_second_level = df_result.index.get_level_values("timestamp")
+    series_second_level = series_result.index.get_level_values("timestamp")
+    tm.assert_index_equal(df_second_level, series_second_level)

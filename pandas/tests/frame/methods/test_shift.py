@@ -797,6 +797,20 @@ class TestDataFrameShift:
         result = df.shift(freq=offset)
         tm.assert_frame_equal(result, df_shifted)
 
+    def test_shift_empty_df_with_freq_infer_gh40799(self):
+        # GH#40799: shift(freq='infer') on an empty DataFrame (no columns)
+        # should still shift the index, not return the original unchanged.
+        dates = date_range("2020-01-01", periods=3, freq="D")
+        df = DataFrame(index=dates)
+
+        result = df.shift(1, freq="infer")
+        expected = DataFrame(index=dates.shift(1))
+        tm.assert_frame_equal(result, expected)
+
+        # Also test with freq specified directly for comparison
+        result2 = df.shift(1, freq="D")
+        tm.assert_frame_equal(result2, expected)
+
     def test_series_shift_interval_preserves_closed(self):
         # GH#60389
         ser = Series(

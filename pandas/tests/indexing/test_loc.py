@@ -2140,6 +2140,24 @@ class TestLocSetitemWithExpansion:
         )
         tm.assert_frame_equal(df, expected)
 
+    def test_loc_setitem_convert_object_column_to_ordered_categorical(self):
+        # GH#52593 - same as above but with ordered=True
+        df = DataFrame({"A": [1, 2], "B": ["x", "y"]})
+        assert df["B"].dtype == object
+        df.loc[:, "B"] = Categorical(
+            df["B"], categories=["x", "y"], ordered=True
+        )
+        assert df["B"].dtype == CategoricalDtype(
+            categories=["x", "y"], ordered=True
+        )
+        expected = DataFrame(
+            {
+                "A": [1, 2],
+                "B": Categorical(["x", "y"], categories=["x", "y"], ordered=True),
+            }
+        )
+        tm.assert_frame_equal(df, expected)
+
     def test_loc_setitem_with_expansion_and_existing_dst(self):
         # GH#18308
         start = Timestamp("2017-10-29 00:00:00+0200", tz="Europe/Madrid")

@@ -340,6 +340,19 @@ class TestPandasContainer:
         result = read_json(data, orient="split")
         tm.assert_frame_equal(result, df)
 
+    def test_roundtrip_multiindex_rows(self):
+        # GH#52595: read_json with orient='split' and MultiIndex row index
+        # should not raise NotImplementedError (regression from 1.5.3 -> 2.0)
+        midx = pd.MultiIndex.from_tuples(
+            [(1, "a"), (2, "b")], names=["num", "letter"]
+        )
+        df = DataFrame({"value": [10, 20]}, index=midx)
+        data = StringIO(df.to_json(orient="split"))
+        # Should not raise NotImplementedError when convert_axes=True (default)
+        result = read_json(data, orient="split")
+        assert isinstance(result.index, pd.MultiIndex)
+        assert result["value"].tolist() == [10, 20]
+
     @pytest.mark.parametrize(
         "data,msg,orient",
         [
@@ -2385,3 +2398,20 @@ def test_large_number():
     )
     expected = Series([9999999999999999])
     tm.assert_series_equal(result, expected)
+
+
+@pytest.mark.parametrize(
+    "null_value",
+    [
+        np.nan,
+        None,
+        pd.NA,
+    ],
+    ids=["np.nan", "None", "pd.NA"],
+)
+def test_to_json_null_index(null_value):
+    # GH#31801 - null-like values in index should serialize as JSON null
+    # not as their string representation ("nan", "None", "<NA>")
+    ser = Series([1], index=[null_value])
+    result = ser.to_json()
+    assert result == '{"null":1}'

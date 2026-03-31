@@ -295,6 +295,17 @@ def test_tick_division_precision_gh57264():
     assert result4 == expected
     assert isinstance(result4, Nano)
 
+    # Original issue report: Second() / 10 should give Milli(100), not Day(0)
+    result5 = Second() / 10
+    expected5 = Milli(100)
+    assert result5 == expected5
+    assert isinstance(result5, Milli)
+
+    # Minute()/60 should give Milli(1000) == Second(1)
+    result6 = Minute() / 60
+    expected6 = Second(1)
+    assert result6 == expected6
+
 
 def test_tick_mul_float():
     off = Micro(2)

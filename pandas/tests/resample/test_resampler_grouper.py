@@ -672,3 +672,29 @@ def test_groupby_resample_on_index_with_list_of_keys_missing_column():
     rs = gb.resample("2D")
     with pytest.raises(KeyError, match="Columns not found"):
         rs[["val_not_in_dataframe"]]
+
+
+def test_resample_groupby_agg_as_index_false():
+    # GH#52397: groupby with as_index=False should work with dict-like agg
+    # in DatetimeIndexResamplerGroupby. Previously raised:
+    #   ValueError: Length of values (5) does not match length of index (30)
+    df = DataFrame(
+        {
+            "a": np.repeat([0, 1, 2], 4),
+            "b": range(12),
+        },
+        index=pd.date_range(start="2023-01-01", freq="1min", periods=12),
+    )
+
+    # Both of these should succeed and produce equivalent results.
+    # String/callable form (was already working):
+    result_func = df.groupby("a", as_index=False).resample("2min").agg(min)
+    # Dict form (previously raised ValueError):
+    result_dict = df.groupby("a", as_index=False).resample("2min").agg({"b": "min"})
+
+    # The dict result's "b" column should match what .min() returns
+    tm.assert_series_equal(
+        result_dict["b"].reset_index(drop=True),
+        result_func["b"].reset_index(drop=True),
+        check_names=False,
+    )

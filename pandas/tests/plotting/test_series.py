@@ -15,6 +15,7 @@ from pandas import (
     date_range,
     period_range,
     plotting,
+    timedelta_range,
 )
 import pandas._testing as tm
 from pandas.tests.plotting.common import (
@@ -1033,3 +1034,12 @@ class TestSeriesPlots:
         assert ax is not None
         result_ydata = ax.get_lines()[0].get_ydata()
         assert len(result_ydata) == 4
+
+    def test_bar_plot_timedelta_dtype(self):
+        # GH#39320 - Series.plot.bar() should work with timedelta values
+        s = Series(timedelta_range("1 day", periods=3))
+        ax = _check_plot_works(s.plot.bar)
+        assert ax is not None
+        # Values should be plotted as float (nanoseconds)
+        bars = ax.patches
+        assert len(bars) == 3

@@ -225,3 +225,23 @@ class TestDataFrameIsIn:
         result = df.isin([val])
         expected = DataFrame({"a": [True], "b": [False]})
         tm.assert_frame_equal(result, expected)
+
+    def test_isin_with_none_series(self):
+        # GH#35565: DataFrame.isin(Series) should treat None/NaN as matching
+        # None/NaN at the same index position
+        x = DataFrame([["foo", "bar"], [1, None]])
+        y = x[1].copy()  # Series(['bar', None], index=[0, 1])
+
+        result = x.isin(y)
+        expected = DataFrame([[False, True], [False, True]])
+        tm.assert_frame_equal(result, expected)
+
+    def test_isin_with_none_dataframe(self):
+        # GH#35565: DataFrame.isin(DataFrame) should treat None/NaN as matching
+        # None/NaN at aligned positions
+        x = DataFrame([["foo", "bar"], [1, None]])
+        y = x.copy()
+
+        result = x.isin(y)
+        expected = DataFrame([[True, True], [True, True]])
+        tm.assert_frame_equal(result, expected)

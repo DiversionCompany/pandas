@@ -148,6 +148,7 @@ from pandas.core.indexes.api import (
     DatetimeIndex,
     Index,
     PeriodIndex,
+    TimedeltaIndex,
     default_index,
     ensure_index,
     ensure_index_from_sequences,
@@ -584,6 +585,11 @@ class DataFrame(NDFrame, OpsMixin):
                     data = np.asarray(data)
                 else:
                     data = list(data)
+            elif not isinstance(data, (list, np.ndarray)):
+                # GH#41682: UserList and other non-list Sequences need to be
+                # converted to a plain list so that downstream processing
+                # (e.g. maybe_convert_platform) handles them correctly.
+                data = list(data)
             if len(data) > 0:
                 if is_dataclass(data[0]):
                     data = dataclasses_to_dicts(data)
@@ -6905,6 +6911,19 @@ class DataFrame(NDFrame, OpsMixin):
                 )
 
         index = ensure_index_from_sequences(arrays, names)
+
+        # GH#42747 - Restore freq for DatetimeIndex/TimedeltaIndex that was
+        # lost when the datetime/timedelta column was stored as a 2D array in
+        # the block manager (freq is only tracked for 1D arrays).  When
+        # len >= 3, infer the freq from the resulting index values so that
+        # set_index preserves the same freq that was present on the original
+        # DatetimeIndex/TimedeltaIndex.
+        if (
+            isinstance(index, (DatetimeIndex, TimedeltaIndex))
+            and index.freq is None
+            and len(index) >= 3
+        ):
+            index = index._with_freq("infer")
 
         if verify_integrity and not index.is_unique:
             duplicates = index[index.duplicated()].unique()
@@ -18577,11 +18596,22 @@ class DataFrame(NDFrame, OpsMixin):
         elif isinstance(values, Series):
             if not values.index.is_unique:
                 raise ValueError("cannot compute isin with a duplicate axis.")
-            result = self.eq(values.reindex_like(self), axis="index")
+            aligned_values = values.reindex_like(self)
+            result = self.eq(aligned_values, axis="index")
+            # GH#35565: NA/None values in self should match NA/None in values
+            # at the same index position (isin semantics: NA matches NA)
+            self_na = self.isna()
+            values_na = aligned_values.isna()
+            # Broadcast values_na (1D) across columns using apply
+            result = result | self_na.apply(lambda col: col & values_na)
         elif isinstance(values, DataFrame):
             if not (values.columns.is_unique and values.index.is_unique):
                 raise ValueError("cannot compute isin with a duplicate axis.")
-            result = self.eq(values.reindex_like(self))
+            aligned_values = values.reindex_like(self)
+            result = self.eq(aligned_values)
+            # GH#35565: NA/None values in self should match NA/None in values
+            # at aligned positions (isin semantics: NA matches NA)
+            result = result | (self.isna() & aligned_values.isna())
         else:
             if not is_list_like(values):
                 raise TypeError(

@@ -4,6 +4,7 @@ Module for scope operations
 
 from __future__ import annotations
 
+import builtins as _builtins_module
 from collections import ChainMap
 import datetime
 import inspect
@@ -21,6 +22,9 @@ from pandas.errors import UndefinedVariableError
 
 _KT = TypeVar("_KT")
 _VT = TypeVar("_VT")
+
+# Sentinel to distinguish "not found" from None in getattr calls
+_UNSET = object()
 
 
 # https://docs.python.org/3/library/collections.html#chainmap-examples-and-recipes
@@ -225,7 +229,16 @@ class Scope:
         try:
             # only look for locals in outer scope
             if is_local:
-                return self.scope[key]
+                try:
+                    return self.scope[key]
+                except KeyError:
+                    # GH#48694: fall back to Python builtins so that names like
+                    # 'type', 'int', 'str', etc. can be referenced with @variable
+                    # syntax even though they are not in f_locals
+                    builtin_val = getattr(_builtins_module, key, _UNSET)
+                    if builtin_val is not _UNSET:
+                        return builtin_val
+                    raise
 
             # not a local variable so check in resolvers if we have them
             if self.has_resolvers:

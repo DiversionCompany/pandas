@@ -1,6 +1,7 @@
 import array
 from collections import (
     OrderedDict,
+    UserList,
     abc,
     defaultdict,
     namedtuple,
@@ -1652,6 +1653,22 @@ class TestDataFrameConstructors:
         msg = "asdict() should be called on dataclass instances"
         with pytest.raises(TypeError, match=re.escape(msg)):
             DataFrame([Point(0, 0), {"x": 1, "y": 0}])
+
+    def test_constructor_userlist_of_dataclasses(self):
+        # GH#41682: DataFrame constructor with UserList of dataclasses should work
+        Point = make_dataclass("Point", [("x", int), ("y", int)])
+
+        data = UserList([Point(0, 3), Point(1, 3)])
+        expected = DataFrame({"x": [0, 1], "y": [3, 3]})
+        result = DataFrame(data)
+        tm.assert_frame_equal(result, expected)
+
+    def test_constructor_userlist_of_scalars(self):
+        # GH#41682: DataFrame constructor with UserList of scalars should work
+        data = UserList([1, 2, 3])
+        expected = DataFrame([1, 2, 3])
+        result = DataFrame(data)
+        tm.assert_frame_equal(result, expected)
 
     def test_constructor_list_of_dict_order(self):
         # GH10056

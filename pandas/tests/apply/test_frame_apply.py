@@ -1899,3 +1899,50 @@ def test_apply_timedelta_preserves_resolution():
     direct = df["a"] - df["b"]
     applied = df.apply(lambda row: row["a"] - row["b"], axis=1)
     assert applied.dtype == direct.dtype
+
+
+def test_apply_empty_with_raw_true():
+    # GH#41997: apply_empty_result should pass ndarray (not Series) to func
+    # when raw=True, to be consistent with non-empty case
+    df = DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+    empty_df = df.iloc[:0]
+
+    call_types_nonempty = []
+    call_types_empty = []
+
+    def func_nonempty(x):
+        call_types_nonempty.append(type(x).__name__)
+        return x.mean()
+
+    def func_empty(x):
+        call_types_empty.append(type(x).__name__)
+        return x.mean()
+
+    # Non-empty: raw=True should pass ndarray
+    df.apply(func_nonempty, axis=1, raw=True)
+    assert all(t == "ndarray" for t in call_types_nonempty), (
+        f"Non-empty raw=True should pass ndarray, got: {call_types_nonempty}"
+    )
+
+    # Empty: raw=True probe should also pass ndarray (was passing Series before fix)
+    empty_df.apply(func_empty, axis=1, raw=True)
+    assert all(t == "ndarray" for t in call_types_empty), (
+        f"Empty raw=True probe should pass ndarray, got: {call_types_empty}"
+    )
+
+
+def test_apply_empty_with_raw_false():
+    # GH#41997: apply_empty_result should pass Series to func when raw=False
+    df = DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+    empty_df = df.iloc[:0]
+
+    call_types = []
+
+    def func(x):
+        call_types.append(type(x).__name__)
+        return x.mean()
+
+    empty_df.apply(func, axis=1, raw=False)
+    assert all(t == "Series" for t in call_types), (
+        f"Empty raw=False probe should pass Series, got: {call_types}"
+    )

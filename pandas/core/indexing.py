@@ -2677,13 +2677,18 @@ class _iLocIndexer(_LocationIndexer):
             # properly update the column's dtype instead of trying to set
             # inplace. Inplace assignment silently coerces the value to fit
             # the existing object dtype without raising any error.
+            # GH#52825: when the DataFrame is empty and we are setting a
+            # non-empty list-like value, numpy will silently broadcast the
+            # value into the empty array without expanding it (e.g. numpy
+            # allows `np.array([])[slice(None)] = ['abc']` without error).
+            # We must use isetitem to expand the DataFrame correctly.
             col_dtype = self.obj.dtypes.iloc[loc]
             value_dtype = getattr(value, "dtype", None)
             if (
                 col_dtype == object
                 and value_dtype is not None
                 and value_dtype != object
-            ):
+            ) or (self.obj.empty and is_list_like(value) and len(value) > 0):
                 self.obj.isetitem(loc, value)
             else:
                 try:
@@ -2927,7 +2932,19 @@ class _iLocIndexer(_LocationIndexer):
             # we have a frame, with multiple indexers on both axes; and a
             # series, so need to broadcast (see GH5206)
             if all(is_sequence(_) or isinstance(_, slice) for _ in indexer):
-                ser_values = ser.reindex(obj.axes[0][indexer[0]])._values
+                target_ix = obj.axes[0][indexer[0]]
+                if (
+                    isinstance(target_ix, MultiIndex)
+                    and not isinstance(ser.index, MultiIndex)
+                    and len(ser) == len(target_ix)
+                ):
+                    # GH#46837: When setting a slice of a MultiIndex Series via
+                    # loc (e.g. s.loc[0, :] = s.loc[0, :]), the RHS Series has a
+                    # reduced-level index that cannot be aligned with the MultiIndex
+                    # target. Use positional assignment instead to avoid NaNs.
+                    ser_values = ser._values
+                else:
+                    ser_values = ser.reindex(target_ix)._values
 
                 # single indexer
                 if len(indexer) > 1 and not multiindex_indexer:

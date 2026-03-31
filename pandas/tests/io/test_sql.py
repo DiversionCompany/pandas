@@ -4447,7 +4447,7 @@ def test_xsqlite_if_exists(sqlite_buildin):
 
 
 def test_read_sql_dict_cursor():
-    # GH#53028 - DBAPI2 cursors with dict-based row factories (e.g. pymysql
+    # GH#52437 / GH#53028 - DBAPI2 cursors with dict-based row factories (e.g. pymysql
     # DictCursor) return rows as dicts rather than tuples. pandas should handle
     # this gracefully and produce correct column values.
     #
@@ -4474,7 +4474,7 @@ def test_read_sql_dict_cursor():
 
 
 def test_read_sql_dict_cursor_chunksize():
-    # GH#53028 - same as test_read_sql_dict_cursor but with chunksize
+    # GH#52437 / GH#53028 - same as test_read_sql_dict_cursor but with chunksize
     # to exercise the _query_iterator path.
     def dict_row_factory(cursor, row):
         return dict(zip([col[0] for col in cursor.description], row))
@@ -4492,4 +4492,27 @@ def test_read_sql_dict_cursor_chunksize():
     expected = DataFrame({"a": [1, 2, 3], "b": ["foo", "bar", "baz"]})
     expected["a"] = expected["a"].astype(np.int64)
     tm.assert_frame_equal(result, expected)
+    con.close()
+
+
+def test_read_sql_dict_cursor_data_not_column_names():
+    # GH#53028 - regression where dict cursor caused column names to appear
+    # as data values (each row showed column name instead of actual value)
+    def dict_row_factory(cursor, row):
+        return dict(zip([col[0] for col in cursor.description], row))
+
+    con = sqlite3.connect(":memory:")
+    con.row_factory = dict_row_factory
+    con.execute("CREATE TABLE sample (id INTEGER, value TEXT, state_id INTEGER)")
+    con.execute("INSERT INTO sample VALUES (117, 'ABCDEF', 5)")
+    con.execute("INSERT INTO sample VALUES (163, 'DEFRDC', 5)")
+    con.commit()
+
+    result = sql.read_sql("SELECT * FROM sample", con)
+
+    # Verify data contains actual values, NOT column names
+    assert list(result.columns) == ["id", "value", "state_id"]
+    assert result.iloc[0]["id"] == 117  # not "id"
+    assert result.iloc[0]["value"] == "ABCDEF"  # not "value"
+    assert result.iloc[1]["id"] == 163  # not "id"
     con.close()

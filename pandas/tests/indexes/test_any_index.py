@@ -207,3 +207,31 @@ class TestBigEndian:
         # little-endian compiler"
         assert idx.is_unique is True
         assert len(idx.get_indexer([1, 3])) == 2
+
+    def test_index_big_endian_get_indexer_nearest(self):
+        # GH#46085 - get_indexer with method="nearest" on big-endian float
+        # coordinates should not raise ValueError
+        from pandas import Index
+
+        # Simulate xarray coords: np.arange(6, dtype=">f4")
+        arr = np.arange(6, dtype=">f4")
+        idx = Index(arr)
+        # This should not raise "Big-endian buffer not supported on
+        # little-endian compiler"
+        result = idx.get_indexer([1.3, 2.5], method="nearest")
+        # 1.3 is nearest to index 1 (value 1.0), 2.5 is nearest to index 3 (value 3.0)
+        tm.assert_numpy_array_equal(result, np.array([1, 3]))
+
+    @pytest.mark.parametrize(
+        "method",
+        ["nearest", "pad", "backfill"],
+    )
+    def test_index_big_endian_get_indexer_methods(self, method):
+        # GH#53234 - all get_indexer methods should work with big-endian Index
+        from pandas import Index
+
+        arr = np.arange(1, 6, dtype=">f4")  # [1.0, 2.0, 3.0, 4.0, 5.0]
+        idx = Index(arr)
+        # Should not raise ValueError: Big-endian buffer not supported
+        result = idx.get_indexer([1.5, 3.5], method=method)
+        assert len(result) == 2

@@ -1402,6 +1402,28 @@ def test_empty_df(method, op):
     tm.assert_series_equal(result, expected)
 
 
+@pytest.mark.parametrize(
+    "func",
+    [
+        lambda gb: gb["b"].values[-1],
+        lambda gb: gb["b"].iloc[0],
+        lambda gb: gb.iloc[0],
+    ],
+)
+def test_dataframe_groupby_apply_lambda_positional_empty(func):
+    # GH#46496 - DataFrameGroupBy.apply with lambda using positional
+    # references should not error on an empty DataFrame
+    empty_df = DataFrame({"a": [], "b": []})
+    gb = empty_df.groupby("a", group_keys=True)
+
+    result = gb.apply(func, include_groups=False)
+    expected = DataFrame(
+        {"b": []},
+        index=Index([], dtype="float64", name="a"),
+    )
+    tm.assert_frame_equal(result, expected)
+
+
 def test_include_groups():
     # GH#7155
     df = DataFrame({"a": [1, 1, 2], "b": [3, 4, 5]})

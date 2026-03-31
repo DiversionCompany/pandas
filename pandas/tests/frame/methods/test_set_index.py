@@ -135,12 +135,12 @@ class TestSetIndex:
 
         df = DataFrame(data={"a": [0, 1, 2], "b": [3, 4, 5]}, index=di).reset_index()
         # single level
+        # GH#42747 - set_index now infers and restores the freq
         res = df.set_index("index")
         exp = DataFrame(
             data={"a": [0, 1, 2], "b": [3, 4, 5]},
             index=Index(di, name="index"),
         )
-        exp.index = exp.index._with_freq(None)
         tm.assert_frame_equal(res, exp)
 
         # GH#12920
@@ -148,6 +148,22 @@ class TestSetIndex:
         exp_index = MultiIndex.from_arrays([di, [0, 1, 2]], names=["index", "a"])
         exp = DataFrame({"b": [3, 4, 5]}, index=exp_index)
         tm.assert_frame_equal(res, exp)
+
+    def test_set_index_freq_is_preserved(self):
+        # GH#42747 - set_index should preserve the freq of a DatetimeIndex column
+        dti = date_range("2001-01-01", periods=20, freq="h", tz="UTC")
+        df = DataFrame({"datetime": dti, "value": range(20)})
+        result = df.set_index("datetime")
+        assert result.index.freq is not None
+        assert result.index.freq == dti.freq
+
+    def test_set_index_freq_preserved_no_tz(self):
+        # GH#42747 - also works without timezone
+        dti = date_range("2001-01-01", periods=20, freq="h")
+        df = DataFrame({"datetime": dti, "value": range(20)})
+        result = df.set_index("datetime")
+        assert result.index.freq is not None
+        assert result.index.freq == dti.freq
 
     def test_set_index(self, float_string_frame):
         df = float_string_frame

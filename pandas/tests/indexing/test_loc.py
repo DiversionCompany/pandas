@@ -1220,6 +1220,28 @@ class TestLocBaseIndependent:
         df.loc[0, "x"] = expected.loc[0, "x"]
         tm.assert_frame_equal(df, expected)
 
+    def test_loc_setitem_empty_append_single_element_list(self):
+        # GH#52825 - setting a 1-element list should expand an empty DataFrame
+        # just like a multi-element list does
+        df = DataFrame(columns=["text", "language"])
+        df.loc[:, "text"] = ["abc"]
+        df.loc[:, "language"] = ["en"]
+        expected = DataFrame({"text": ["abc"], "language": ["en"]})
+        tm.assert_frame_equal(df, expected)
+
+    def test_loc_setitem_empty_append_single_element_multiple_dtypes(self):
+        # GH#52825 - 1-element list assignment should work for various dtypes
+        df = DataFrame(columns=["int_col", "float_col", "str_col", "bool_col"])
+        df.loc[:, "int_col"] = [42]
+        df.loc[:, "float_col"] = [3.14]
+        df.loc[:, "str_col"] = ["hello"]
+        df.loc[:, "bool_col"] = [True]
+        assert len(df) == 1
+        assert df["int_col"].iloc[0] == 42
+        assert df["float_col"].iloc[0] == 3.14
+        assert df["str_col"].iloc[0] == "hello"
+        assert df["bool_col"].iloc[0] is True
+
     def test_loc_setitem_empty_append_raises(self):
         # GH6173, various appends to an empty dataframe
 
@@ -2114,6 +2136,24 @@ class TestLocSetitemWithExpansion:
                 "A": Categorical(["A", "B"], categories=["A", "B"]),
                 "B": [1, 2],
                 "C": Categorical(["D", "E"], categories=["D", "E"]),
+            }
+        )
+        tm.assert_frame_equal(df, expected)
+
+    def test_loc_setitem_convert_object_column_to_ordered_categorical(self):
+        # GH#52593 - same as above but with ordered=True
+        df = DataFrame({"A": [1, 2], "B": ["x", "y"]})
+        assert df["B"].dtype == object
+        df.loc[:, "B"] = Categorical(
+            df["B"], categories=["x", "y"], ordered=True
+        )
+        assert df["B"].dtype == CategoricalDtype(
+            categories=["x", "y"], ordered=True
+        )
+        expected = DataFrame(
+            {
+                "A": [1, 2],
+                "B": Categorical(["x", "y"], categories=["x", "y"], ordered=True),
             }
         )
         tm.assert_frame_equal(df, expected)

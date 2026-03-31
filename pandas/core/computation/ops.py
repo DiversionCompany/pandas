@@ -108,8 +108,14 @@ class Term:
     def _resolve_name(self):
         local_name = str(self.local_name)
         is_local = self.is_local
-        if local_name in self.env.scope and isinstance(
-            self.env.scope[local_name], type
+        # Only override is_local when the user did NOT explicitly use the '@'
+        # prefix. If '@name' was used, respect the explicit local-scope lookup.
+        # GH#48694: do not override is_local for explicitly-referenced names.
+        explicitly_local = str(self.name).startswith(LOCAL_TAG)
+        if (
+            not explicitly_local
+            and local_name in self.env.scope
+            and isinstance(self.env.scope[local_name], type)
         ):
             is_local = False
 

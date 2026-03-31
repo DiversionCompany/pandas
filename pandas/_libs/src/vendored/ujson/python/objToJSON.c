@@ -1356,16 +1356,32 @@ static char **NpyArr_encodeLabels(PyArrayObject *labels, PyObjectEncoder *enc,
         }
       }
     } else { // Fallback to string representation
-      // Replace item with the string to keep it alive.
-      Py_SETREF(item, PyObject_Str(item));
-      if (item == NULL) {
-        NpyArr_freeLabels(ret, num);
-        ret = 0;
-        break;
+      // GH#31801: check for null-like values (None, float NaN, pd.NA)
+      // and encode them as JSON "null" instead of their string representation.
+      int is_null_label = 0;
+      if (item == Py_None) {
+        is_null_label = 1;
+      } else if (PyFloat_Check(item) && npy_isnan(PyFloat_AS_DOUBLE(item))) {
+        is_null_label = 1;
+      } else if (object_is_na_type(item)) {
+        is_null_label = 1;
       }
 
-      cLabel = (char *)PyUnicode_AsUTF8(item);
-      len = strlen(cLabel);
+      if (is_null_label) {
+        len = 4;
+        cLabel = "null";
+      } else {
+        // Replace item with the string to keep it alive.
+        Py_SETREF(item, PyObject_Str(item));
+        if (item == NULL) {
+          NpyArr_freeLabels(ret, num);
+          ret = 0;
+          break;
+        }
+
+        cLabel = (char *)PyUnicode_AsUTF8(item);
+        len = strlen(cLabel);
+      }
     }
 
     // Add 1 to include NULL terminator

@@ -276,6 +276,24 @@ def test_logical_ufunc_nullable_boolean(ufunc):
     assert result.dtype == pd.BooleanDtype()
 
 
+@pytest.mark.parametrize(
+    "ufunc", [np.logical_or, np.logical_and, np.logical_xor]
+)
+def test_logical_ufunc_dataframe(ufunc):
+    # GH#54416 - np.logical_or/and/xor should work element-wise on DataFrames
+    # without raising ValueError or producing unexpected results
+    df1 = pd.DataFrame({"a": [True, True], "b": [True, False]})
+    df2 = pd.DataFrame({"or": [False, True], "a": [True, True]})
+    result = ufunc(df1, df2)
+    expected = pd.DataFrame(
+        {
+            "a": ufunc(df1["a"].to_numpy(), df2["or"].to_numpy()),
+            "b": ufunc(df1["b"].to_numpy(), df2["a"].to_numpy()),
+        }
+    )
+    tm.assert_frame_equal(result, expected)
+
+
 @pytest.fixture(
     params=[
         pd.array([1, 3, 2], dtype=np.int64),

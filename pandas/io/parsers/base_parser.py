@@ -546,7 +546,20 @@ class ParserBase:
         if dtype_backend == "pyarrow":
             pa = import_optional_dependency("pyarrow")
             if isinstance(result, np.ndarray):
-                result = ArrowExtensionArray(pa.array(result, from_pandas=True))
+                try:
+                    result = ArrowExtensionArray(pa.array(result, from_pandas=True))
+                except pa.lib.ArrowInvalid:
+                    # GH#63830: mixed-type columns (e.g. int + str) fail strict
+                    # type inference; fall back to string type, matching the
+                    # numpy_nullable behavior (object dtype) for such mixed columns.
+                    # Convert non-NA values to str and preserve NA as null.
+                    na_mask = isna(result)
+                    str_result = result.copy()
+                    str_result[~na_mask] = [str(x) for x in result[~na_mask]]
+                    str_result[na_mask] = None
+                    result = ArrowExtensionArray(
+                        pa.array(str_result, from_pandas=True)
+                    )
             elif isinstance(result, BaseMaskedArray):
                 if result._mask.all():
                     # We want an arrow null array here

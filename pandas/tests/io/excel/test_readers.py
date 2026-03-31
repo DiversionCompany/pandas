@@ -787,6 +787,27 @@ class TestReaders:
         # string_storage setting -> ignore that for checking the result
         tm.assert_frame_equal(result, expected, check_column_type=False)
 
+    def test_dtype_backend_pyarrow_mixed_types(self, read_ext, tmp_excel):
+        # GH#63830: read_excel with dtype_backend='pyarrow' should handle
+        # columns with mixed types (e.g. int + str) without raising ArrowInvalid.
+        # The result should be a string column in this case.
+        if read_ext in (".xlsb", ".xls"):
+            pytest.skip(f"No engine for filetype: '{read_ext}'")
+
+        pytest.importorskip("pyarrow")
+
+        # Write a DataFrame where column B has mixed int/str values
+        df = DataFrame({"A": ["id", "type_code"], "B": [741528, "IPECL3"]})
+        df.to_excel(tmp_excel, sheet_name="test", index=False)
+
+        result = pd.read_excel(
+            tmp_excel, sheet_name="test", dtype_backend="pyarrow"
+        )
+
+        # Column B has mixed int/string values, should be read as string type
+        assert result["B"].dtype == pd.ArrowDtype("string")
+        assert list(result["B"]) == ["741528", "IPECL3"]
+
     @pytest.mark.parametrize("dtypes, exp_value", [({}, 1), ({"a.1": "int64"}, 1)])
     def test_dtype_mangle_dup_cols(self, read_ext, dtypes, exp_value):
         # GH#35211

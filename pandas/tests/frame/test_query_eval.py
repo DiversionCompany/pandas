@@ -1607,3 +1607,30 @@ class TestDataFrameQueryBacktickQuoting:
         result = df.query("a > @now")
         expected = DataFrame({"a": []}, dtype=object)
         tm.assert_frame_equal(result, expected)
+
+
+@pytest.mark.parametrize(
+    "builtin_name",
+    [
+        "type",  # Python builtin not in DEFAULT_GLOBALS
+        "int",  # Python builtin not in DEFAULT_GLOBALS
+        "str",  # Python builtin not in DEFAULT_GLOBALS
+        "float",  # Python builtin not in DEFAULT_GLOBALS
+        "list",  # in DEFAULT_GLOBALS, but was a type → is_local override
+        "tuple",  # in DEFAULT_GLOBALS, but was a type → is_local override
+    ],
+)
+def test_query_local_variable_is_python_builtin(builtin_name):
+    # GH#48694 - referencing Python builtins via @variable syntax in query
+    # should not raise UndefinedVariableError
+    import builtins
+
+    df = DataFrame({"a": [1, 2, 3]})
+    builtin_val = getattr(builtins, builtin_name)
+    # @builtin_name refers to the Python builtin type/function.
+    # We compare a column element to the builtin object as a constant.
+    # The result may be empty (e.g. 1 == int is False), but the important
+    # thing is that no UndefinedVariableError is raised.
+    result = df.query(f"a == @{builtin_name}", parser="pandas")
+    expected = df[df["a"] == builtin_val]
+    tm.assert_frame_equal(result, expected)

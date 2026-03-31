@@ -223,6 +223,7 @@ Indexing
 - Bug where assigning :attr:`Series.attrs` on a :class:`DataFrame` column (e.g. ``df["A"].attrs = {...}``) had no effect after Copy-on-Write was enabled in pandas 3.0. The :class:`DataFrame` now stores per-column attrs and restores them on each column access (:issue:`64711`)
 - Bug in :meth:`DataFrame.drop` and :meth:`Series.drop` where passing ``pd.NA`` (or other NA values) as index labels when using an :class:`ArrowDtype`-backed index raised an ``ArrowInvalid`` error (:issue:`63304`)
 - Bug in :meth:`DataFrame.loc` where assigning a single-element list to a column of an empty :class:`DataFrame` (e.g. ``df.loc[:, "col"] = ["value"]``) failed to add rows, while multi-element lists worked correctly (:issue:`52825`)
+- Bug in :meth:`DataFrame.query` and :func:`eval` where referencing a Python builtin (e.g. ``type``, ``int``) or a name from the default query globals (e.g. ``list``, ``tuple``) with the ``@variable`` syntax raised :class:`~pandas.errors.UndefinedVariableError` (:issue:`48694`)
 -
 
 Missing

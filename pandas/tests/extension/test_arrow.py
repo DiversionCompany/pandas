@@ -4131,7 +4131,17 @@ def test_large_string_radd_scalar(arrow_type):
         ["prefix hello", "prefix world"], dtype=ArrowDtype(arrow_type)
     )
     tm.assert_series_equal(result, expected)
-    assert result.unit == unit
+
+
+def test_large_string_dataframe_column_add():
+    # GH#64393 - exact issue report scenario: DataFrame column with pa.large_string dtype
+    # should support string concatenation with '+' operator without raising
+    # ArrowNotImplementedError: Function 'binary_join_element_wise' has no kernel
+    # matching input types (large_string, string, large_string)
+    df = pd.DataFrame({"a": ["foo"]}, dtype=pd.ArrowDtype(pa.large_string()))
+    result = df["a"] + "-"
+    expected = pd.Series(["foo-"], name="a", dtype=pd.ArrowDtype(pa.large_string()))
+    tm.assert_series_equal(result, expected)
 
 
 @pytest.mark.parametrize(

@@ -1060,23 +1060,34 @@ class FrameApply(NDFrameApply):
         if not should_reduce:
             try:
                 if self.axis == 0:
+                    probe = Series([], dtype=np.float64)
                     r = self.func(
-                        Series([], dtype=np.float64), *self.args, **self.kwargs
+                        probe.to_numpy() if self.raw else probe,
+                        *self.args,
+                        **self.kwargs,
                     )
                 else:
+                    probe = Series(index=self.columns, dtype=np.float64)
                     r = self.func(
-                        Series(index=self.columns, dtype=np.float64),
+                        probe.to_numpy() if self.raw else probe,
                         *self.args,
                         **self.kwargs,
                     )
             except Exception:
                 pass
             else:
+                # GH#41997: when raw=True, func receives ndarray not Series;
+                # check result type using ndarray instead of Series
                 should_reduce = not isinstance(r, Series)
 
         if should_reduce:
             if len(self.agg_axis):
-                r = self.func(Series([], dtype=np.float64), *self.args, **self.kwargs)
+                probe = Series([], dtype=np.float64)
+                r = self.func(
+                    probe.to_numpy() if self.raw else probe,
+                    *self.args,
+                    **self.kwargs,
+                )
             else:
                 r = np.nan
 

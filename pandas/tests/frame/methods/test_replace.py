@@ -1596,3 +1596,30 @@ def test_mask_missing_zero_d_array_gh47101():
     result4 = mask_missing(arr_int, 3)
     assert isinstance(result4, np.ndarray)
     assert bool(result4) is False
+
+
+def test_mask_missing_python_bool_from_eq_gh47101():
+    # GH#47101: when arr.__eq__(value) returns a plain Python bool (e.g. from
+    # custom array-like objects like qpython's qlist), mask_missing raised:
+    #   AttributeError: 'bool' object has no attribute 'to_numpy'
+    # The fix falls back to element-wise comparison via numpy.
+    from pandas.core.missing import mask_missing
+
+    # Simulate a custom array-like whose __eq__ returns a Python bool scalar
+    # (not an ndarray). This mimics qpython's qlist behavior.
+    class BoolReturningArray(np.ndarray):
+        """ndarray subclass that returns a Python bool from __eq__."""
+
+        def __eq__(self, other):
+            return bool(np.all(super().__eq__(other)))
+
+    arr = np.array([True, True, False, False]).view(BoolReturningArray)
+
+    # arr == False returns Python bool False (not all elements are False)
+    # mask_missing should fall back to element-wise comparison and correctly
+    # identify the False positions.
+    result = mask_missing(arr, False)
+    assert isinstance(result, np.ndarray)
+    assert result.shape == (4,)
+    expected = np.array([False, False, True, True])
+    tm.assert_numpy_array_equal(result, expected)

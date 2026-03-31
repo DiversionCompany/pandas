@@ -70,6 +70,7 @@ Other bug fixes
 - Fixed regression in :meth:`DataFrame.from_records` not initializing subclasses properly (:issue:`57008`)
 - The :meth:`DataFrame.iloc` now works correctly with ``copy_on_write`` option when assigning values after subsetting the columns of a homogeneous DataFrame (:issue:`60309`)
 - Fixed :meth:`DataFrame.loc` incorrectly assigning all ``NaT`` values when setting a datetime column via partial :class:`MultiIndex` key with a simple-indexed :class:`Series` (:issue:`43351`)
+- Fixed :func:`testing.assert_frame_equal` (and :func:`testing.assert_series_equal`) incorrectly treating a Python list and a numpy array with the same values as not equal when ``check_exact=True`` was specified (:issue:`63904`)
 
 .. ---------------------------------------------------------------------------
 .. _whatsnew_233.contributors:

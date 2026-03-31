@@ -423,3 +423,18 @@ def test_assert_frame_equal_nested_df_na(na_value):
     df1 = DataFrame({"df": [inner]})
     df2 = DataFrame({"df": [inner]})
     tm.assert_frame_equal(df1, df2)
+
+
+def test_assert_frame_equal_nested_list_vs_array():
+    # GH#63904 - assert_frame_equal should treat list and numpy array as equal
+    # when their values match, both with check_exact=False (default) and True.
+    df1 = pd.DataFrame({"a": [[1]]})
+    df2 = pd.DataFrame({"a": [np.array([1])]})
+    tm.assert_frame_equal(df1, df2)
+    tm.assert_frame_equal(df1, df2, check_exact=True)
+
+    # Also test with check_exact=False
+    df3 = pd.DataFrame({"a": [[1, 2, 3]]})
+    df4 = pd.DataFrame({"a": [np.array([1, 2, 3])]})
+    tm.assert_frame_equal(df3, df4)
+    tm.assert_frame_equal(df3, df4, check_exact=True)

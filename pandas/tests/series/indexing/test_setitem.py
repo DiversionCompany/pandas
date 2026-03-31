@@ -1865,3 +1865,19 @@ def test_setitem_1d_numpy_array_object_dtype():
     arr2 = np.array([0, 1])
     s["y"] = arr2
     assert s["y"].shape == arr2.shape
+
+
+def test_setitem_1d_numpy_array_object_dtype_via_loc():
+    # GH#53565 - Same regression via .loc accessor
+    s = Series(dtype=object)
+    arr = np.array([1])
+    s.loc["x"] = arr
+    # First assignment via loc
+    assert s.loc["x"].shape == arr.shape, (
+        f"Expected shape {arr.shape}, got {s.loc['x'].shape}"
+    )
+    # Reassignment via loc (existing key) - this was the original regression
+    s.loc["x"] = arr
+    assert s.loc["x"].shape == arr.shape, (
+        f"After loc reassignment, expected shape {arr.shape}, got {s.loc['x'].shape}"
+    )

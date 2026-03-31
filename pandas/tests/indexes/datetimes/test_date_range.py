@@ -746,6 +746,23 @@ class TestDateRanges:
 
         tm.assert_index_equal(result, expected)
 
+    def test_range_where_start_equal_end_with_tz(self):
+        # GH#55293: same behavior with tz-aware timestamps
+        import pytz
+
+        tz = pytz.timezone("US/Eastern")
+        ts = Timestamp("2023-09-26", tz=tz)
+        result_right = date_range(start=ts, end=ts, freq="D", inclusive="right")
+        result_left = date_range(start=ts, end=ts, freq="D", inclusive="left")
+        result_neither = date_range(start=ts, end=ts, freq="D", inclusive="neither")
+        # All half-open or open intervals where start==end should be empty
+        assert len(result_right) == 0
+        assert len(result_left) == 0
+        assert len(result_neither) == 0
+        # But inclusive='both' should have one element
+        result_both = date_range(start=ts, end=ts, freq="D", inclusive="both")
+        assert len(result_both) == 1
+
     def test_freq_dateoffset_with_relateivedelta_nanos(self):
         # GH 46877
         freq = DateOffset(hours=10, days=57, nanoseconds=3)

@@ -1570,6 +1570,30 @@ class TestDataFrameReplaceRegex:
             assert len(df._mgr.blocks) == 1
 
 
+def test_replace_arbitrary_python_objects():
+    # GH#36522 - replacing arbitrary Python objects (not int/str/None)
+    # should work without raising TypeError
+    o1 = object()
+    o2 = object()
+    o3 = object()
+
+    df = DataFrame([{"a": o1, "b": o2}, {"a": o2, "b": o1}])
+    result = df.replace(to_replace={"a": o1}, value={"a": o3})
+    # Column "a": first row replaced o1 -> o3, second row o2 stays
+    # Column "b": unchanged
+    assert result.at[0, "a"] is o3
+    assert result.at[1, "a"] is o2
+    assert result.at[0, "b"] is o2
+    assert result.at[1, "b"] is o1
+
+    # Direct Series.replace with arbitrary Python objects
+    ser = Series([o1, o2, o1])
+    result_ser = ser.replace(o1, o3)
+    assert result_ser.iloc[0] is o3
+    assert result_ser.iloc[1] is o2
+    assert result_ser.iloc[2] is o3
+
+
 def test_mask_missing_zero_d_array_gh47101():
     # GH#47101: mask_missing raised AttributeError: 'bool' object has no
     # attribute 'to_numpy' when arr is a 0-D numpy array, because arr == value

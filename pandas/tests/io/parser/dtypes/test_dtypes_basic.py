@@ -656,6 +656,17 @@ def test_nullable_uint_int_dtype_out_of_range(all_parsers):
         parser.read_csv(StringIO(data), dtype="UInt8")
 
 
+@pytest.mark.usefixtures("pyarrow_xfail")
+@pytest.mark.parametrize("val", ["-1", "257"])
+def test_nullable_uint8_dtype_out_of_range_original_issue(all_parsers, val):
+    # GH#55232: original issue examples - negative values and values > 255 for UInt8
+    # should raise rather than silently wrap around
+    parser = all_parsers
+    data = f"x\n{val}\n"
+    with pytest.raises(TypeError, match="cannot safely cast non-equivalent"):
+        parser.read_csv(StringIO(data), dtype={"x": "UInt8"})
+
+
 def test_index_col_with_dtype_no_rangeindex(all_parsers):
     data = StringIO("345.5,519.5,0\n519.5,726.5,1")
     result = all_parsers.read_csv(

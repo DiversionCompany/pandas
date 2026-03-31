@@ -649,3 +649,35 @@ def test_concat_non_ns_datetime_axis1(unit):
         index=expected_index,
     )
     tm.assert_frame_equal(result, expected)
+
+
+def test_concat_custom_business_day_freq_preserved_regardless_of_order():
+    # GH#64253: concat order should not affect whether index.freq is preserved
+    # when using CustomBusinessDay with holidays
+    holidays = ["2020-01-10"]  # a Friday
+
+    s1 = Series(
+        [1, 2, 3, 4, 5],
+        index=pd.bdate_range("2020-01-01", periods=5, freq="C", holidays=holidays),
+    )
+    s2 = Series(
+        [6, 7, 8, 9, 10],
+        index=pd.bdate_range("2020-01-08", periods=5, freq="C", holidays=holidays),
+    )
+    s3 = Series(
+        [11, 12, 13, 14, 15],
+        index=pd.bdate_range("2020-01-14", periods=5, freq="C", holidays=holidays),
+    )
+
+    result1 = concat([s1, s2, s3])
+    result2 = concat([s1, s3, s2])
+
+    # Both orderings should result in the same freq
+    assert result1.index.freq == result2.index.freq, (
+        f"freq differs based on concat order: "
+        f"[s1,s2,s3]={result1.index.freq}, [s1,s3,s2]={result2.index.freq}"
+    )
+    # The freq should be preserved (not None)
+    assert result1.index.freq is not None, (
+        "freq should be preserved when all inputs share the same CustomBusinessDay freq"
+    )

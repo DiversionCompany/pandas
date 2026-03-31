@@ -281,6 +281,25 @@ def test_cut_series_with_nan():
     assert not isna(result.iloc[4])
 
 
+def test_cut_series_all_nan():
+    # GH#55684 - pd.cut should raise a clear error when all values are NaN
+    s = Series([np.nan, np.nan, np.nan])
+    with pytest.raises(ValueError, match="Cannot cut array with all NaN values"):
+        cut(s, bins=3)
+
+
+def test_cut_series_nan_with_bins_1():
+    # GH#55684 - pd.cut should work with bins=1 and NaN in input
+    s = Series([1.0, np.nan, 3.0])
+    result = cut(s, bins=1)
+
+    assert isinstance(result, Series)
+    assert result.dtype == "category"
+    assert isna(result.iloc[1])
+    assert not isna(result.iloc[0])
+    assert not isna(result.iloc[2])
+
+
 def test_inf_handling():
     data = np.arange(6)
     data_ser = Series(data, dtype="int64")

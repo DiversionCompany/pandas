@@ -29,6 +29,7 @@ enhancement2
 Other enhancements
 ^^^^^^^^^^^^^^^^^^
 - Added :meth:`Series.nearest_time_fill` and :meth:`DataFrame.nearest_time_fill` to fill NA/NaN values with the nearest non-NaN observation by time distance (:issue:`64074`)
+- :meth:`Series.argsort` now correctly handles the ``stable`` parameter: passing ``stable=True`` uses a stable sorting algorithm (equivalent to ``kind='stable'``), matching numpy behavior. Previously ``stable`` was silently ignored (:issue:`64255`)
 - :meth:`.DataFrameGroupBy.agg` now allows for the provided ``func`` to return a NumPy array (:issue:`63957`)
 - Added :meth:`ExtensionArray.count` (:issue:`64450`)
 - Added ``limit_gap`` parameter to :meth:`Series.interpolate` and :meth:`DataFrame.interpolate` to skip interpolation for consecutive NaN runs that exceed a given length (:issue:`64588`)

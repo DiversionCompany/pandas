@@ -580,3 +580,26 @@ def test_series_loc_setitem_multiindex_integer_dtype():
     s.loc["a", :] = s.loc["a", :]
     expected = Series([10, 20, 30, 40], index=idx)
     tm.assert_series_equal(s, expected)
+
+
+def test_loc_setitem_nat_in_datetime_multiindex_column():
+    # GH#43351 - NaT values should be assigned correctly when using partial
+    # MultiIndex key with a simple-indexed Series containing NaT
+    idx = MultiIndex.from_product([["A", "B"], [1, 2]])
+    df = DataFrame(
+        {"dt": pd.to_datetime(["2021-01-01", "2021-01-02", "2021-01-03", "2021-01-04"])},
+        index=idx,
+    )
+    s = Series(
+        [pd.NaT, pd.Timestamp("2021-06-01")],
+        index=pd.Index([1, 2]),
+        dtype="datetime64[ns]",
+    )
+    df.loc["A", "dt"] = s
+
+    # (A,1) should be NaT, (A,2) should be 2021-06-01
+    # (B,1) and (B,2) should be unchanged
+    assert pd.isna(df.loc[("A", 1), "dt"])
+    assert df.loc[("A", 2), "dt"] == pd.Timestamp("2021-06-01")
+    assert df.loc[("B", 1), "dt"] == pd.Timestamp("2021-01-03")
+    assert df.loc[("B", 2), "dt"] == pd.Timestamp("2021-01-04")

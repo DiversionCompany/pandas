@@ -1220,6 +1220,15 @@ class TestLocBaseIndependent:
         df.loc[0, "x"] = expected.loc[0, "x"]
         tm.assert_frame_equal(df, expected)
 
+    def test_loc_setitem_empty_append_single_element_list(self):
+        # GH#52825 - setting a 1-element list should expand an empty DataFrame
+        # just like a multi-element list does
+        df = DataFrame(columns=["text", "language"])
+        df.loc[:, "text"] = ["abc"]
+        df.loc[:, "language"] = ["en"]
+        expected = DataFrame({"text": ["abc"], "language": ["en"]})
+        tm.assert_frame_equal(df, expected)
+
     def test_loc_setitem_empty_append_raises(self):
         # GH6173, various appends to an empty dataframe
 

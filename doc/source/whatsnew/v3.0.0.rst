@@ -1421,6 +1421,7 @@ Groupby/resample/rolling
 - Bug in :meth:`.Rolling.sem` computing incorrect results because it divided by ``sqrt((n - 1) * (n - ddof))`` instead of ``sqrt(n * (n - ddof))``. (:issue:`63180`)
 - Bug in :meth:`.Series.rolling` when used with a :class:`.BaseIndexer` subclass and computing min/max (:issue:`46726`)
 - Bug in :meth:`DataFrame.ewm` and :meth:`Series.ewm` when passed ``times`` and aggregation functions other than mean (:issue:`51695`)
+- Bug in :meth:`.ExponentialMovingWindow.aggregate` (and its alias ``.agg``) raising ``AttributeError`` when passing a single callable; now the callable is invoked on the window object directly (:issue:`63855`)
 - Bug in :meth:`DataFrame.resample` and :meth:`Series.resample` were not keeping the index name when the index had :class:`ArrowDtype` timestamp dtype (:issue:`61222`)
 - Bug in :meth:`DataFrame.resample` changing index type to :class:`MultiIndex` when the dataframe is empty and using an upsample method (:issue:`55572`)
 - Bug in :meth:`.Rolling.skew` and in :meth:`.Rolling.kurt` incorrectly computing skewness and kurtosis, respectively, for windows following outliers due to numerical instability. The calculation now properly handles catastrophic cancellation by recomputing affected windows (:issue:`47461`, :issue:`61416`)

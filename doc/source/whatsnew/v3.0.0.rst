@@ -1302,6 +1302,7 @@ Indexing
 - Bug in :meth:`Index.intersection`, :meth:`Index.union`, :meth:`MultiIndex.intersection`, and :meth:`MultiIndex.union` returning a reference to the original Index instead of a new instance when operating on identical indexes, which could cause metadata corruption when modifying the result (:issue:`63169`)
 - Bug in adding new rows with :meth:`DataFrame.loc.__setitem__` or :class:`Series.loc.__setitem__` which failed to retain dtype on the object's index in some cases (:issue:`41626`)
 - Bug in indexing on a :class:`DatetimeIndex` with a ``timestamp[pyarrow]`` dtype or on a :class:`TimedeltaIndex` with a ``duration[pyarrow]`` dtype (:issue:`62277`)
+- Bug in :meth:`DataFrame.loc` where setting a :class:`Categorical` (or other typed array) into an existing ``object``-dtype column via ``df.loc[:, col] = value`` silently ignored the new dtype instead of converting the column (:issue:`52593`)
 
 Missing
 ^^^^^^^

@@ -111,6 +111,34 @@ def test_xarray_cftimeindex_nearest():
 
 
 @pytest.mark.single_cpu
+def test_import_with_patched_datetime_raises():
+    # GH#64023 - importing pandas when datetime.datetime has been monkey-patched
+    # (e.g. by freezegun) should raise a clear ImportError instead of segfaulting
+    # or hanging.  We simulate the monkey-patch by replacing datetime.datetime
+    # with a Python subclass before importing pandas.
+    script = (
+        "import sys, datetime as _dt; "
+        "class _FakeDatetime(_dt.datetime): pass; "
+        "_FakeDatetime.__module__ = 'fake_module'; "
+        "_dt.datetime = _FakeDatetime; "
+        "import importlib; "
+        # Ensure pandas is not cached so it runs through __init__ again
+        "for k in list(sys.modules): "
+        "    sys.modules.pop(k) if k == 'pandas' or k.startswith('pandas.') else None; "
+        "import pandas"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode != 0, "Expected ImportError but script succeeded"
+    assert "datetime" in result.stderr or "datetime" in result.stdout, (
+        f"Expected error message about datetime patching, got: {result.stderr}"
+    )
+
+
+@pytest.mark.single_cpu
 def test_oo_optimizable():
     # GH 21071
     subprocess.check_call([sys.executable, "-OO", "-c", "import pandas"])

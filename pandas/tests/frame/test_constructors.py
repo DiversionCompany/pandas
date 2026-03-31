@@ -7,6 +7,7 @@ from collections import (
     namedtuple,
 )
 from collections.abc import Iterator
+import dataclasses
 from dataclasses import make_dataclass
 from datetime import (
     date,
@@ -1669,6 +1670,19 @@ class TestDataFrameConstructors:
         expected = DataFrame([1, 2, 3])
         result = DataFrame(data)
         tm.assert_frame_equal(result, expected)
+
+    def test_constructor_userlist_dataclass_mixed_with_list(self):
+        # GH#41682: original issue case - UserList dataclass mixed with list
+        # Previously raised: TypeError: asdict() should be called on dataclass instances
+
+        @dataclasses.dataclass(frozen=True)
+        class MyList(UserList):
+            data: list
+
+        stuff = [MyList([1, 2, 3]), [4, 5, 6]]
+        # Should not raise TypeError
+        result = DataFrame(stuff)
+        assert result.shape == (2, 3)
 
     def test_constructor_list_of_dict_order(self):
         # GH10056

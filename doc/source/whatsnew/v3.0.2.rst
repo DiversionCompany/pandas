@@ -45,6 +45,7 @@ Bug fixes
 - Fixed regression where :meth:`Index.astype` with a NumPy string dtype (e.g. ``np.str_``, ``np.dtype("U10")``) raised ``NotImplementedError`` instead of returning an ``object``-dtype :class:`Index` (:issue:`50127`)
 - Fixed bug in :meth:`Series.mask` and :meth:`DataFrame.mask` where passing a condition containing ``pd.NA`` or ``np.nan`` (object-dtype condition) raised ``TypeError`` instead of treating ``NA``/``NaN`` as ``False`` (i.e. keeping the original value at those positions) (:issue:`35429`)
 - Fixed bug where :meth:`DataFrame.replace` and :meth:`Series.replace` raised ``TypeError`` when replacing arbitrary Python objects (e.g. instances of custom classes) in object-dtype columns (:issue:`36522`)
+- Fixed bug in :class:`~pandas.arrays.ArrowExtensionArray` where string concatenation (``+``) with a scalar string or another Arrow string array raised ``TypeError`` when the array used ``pa.large_string()`` dtype due to type mismatch in PyArrow's ``binary_join_element_wise`` (:issue:`64393`)
 
 .. ---------------------------------------------------------------------------
 .. _whatsnew_302.contributors:

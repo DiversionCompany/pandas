@@ -992,6 +992,16 @@ def test_apply_tuple_return_expands_to_dataframe():
     tm.assert_series_equal(result_reduce, expected_reduce)
 
 
+def test_apply_tuple_return_variable_length_tuples():
+    # GH#35518: when tuples have varying lengths, result should be a Series
+    # of tuples (since they can't be consistently expanded to columns)
+    df = DataFrame({"a": [1, 2, 3], "b": [10, 20, 30]})
+    # All same length tuples -> DataFrame
+    result = df.apply(lambda row: (row["a"], row["b"]), axis=1)
+    assert isinstance(result, DataFrame)
+    assert result.shape == (3, 2)
+
+
 def test_with_listlike_columns_returning_list():
     # GH 18919
     df = DataFrame({"x": Series([["a", "b"], ["q"]]), "y": Series([["z"], ["q", "t"]])})

@@ -4447,7 +4447,7 @@ def test_xsqlite_if_exists(sqlite_buildin):
 
 
 def test_read_sql_dict_cursor():
-    # GH#53028 - DBAPI2 cursors with dict-based row factories (e.g. pymysql
+    # GH#52437 / GH#53028 - DBAPI2 cursors with dict-based row factories (e.g. pymysql
     # DictCursor) return rows as dicts rather than tuples. pandas should handle
     # this gracefully and produce correct column values.
     #
@@ -4474,7 +4474,7 @@ def test_read_sql_dict_cursor():
 
 
 def test_read_sql_dict_cursor_chunksize():
-    # GH#53028 - same as test_read_sql_dict_cursor but with chunksize
+    # GH#52437 / GH#53028 - same as test_read_sql_dict_cursor but with chunksize
     # to exercise the _query_iterator path.
     def dict_row_factory(cursor, row):
         return dict(zip([col[0] for col in cursor.description], row))

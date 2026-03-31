@@ -2912,7 +2912,19 @@ class _iLocIndexer(_LocationIndexer):
             # we have a frame, with multiple indexers on both axes; and a
             # series, so need to broadcast (see GH5206)
             if all(is_sequence(_) or isinstance(_, slice) for _ in indexer):
-                ser_values = ser.reindex(obj.axes[0][indexer[0]])._values
+                target_ix = obj.axes[0][indexer[0]]
+                if (
+                    isinstance(target_ix, MultiIndex)
+                    and not isinstance(ser.index, MultiIndex)
+                    and len(ser) == len(target_ix)
+                ):
+                    # GH#46837: When setting a slice of a MultiIndex Series via
+                    # loc (e.g. s.loc[0, :] = s.loc[0, :]), the RHS Series has a
+                    # reduced-level index that cannot be aligned with the MultiIndex
+                    # target. Use positional assignment instead to avoid NaNs.
+                    ser_values = ser._values
+                else:
+                    ser_values = ser.reindex(target_ix)._values
 
                 # single indexer
                 if len(indexer) > 1 and not multiindex_indexer:

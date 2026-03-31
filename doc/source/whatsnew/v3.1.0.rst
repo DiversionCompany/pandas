@@ -257,6 +257,7 @@ Period
 Plotting
 ^^^^^^^^
 - Bug in :meth:`DataFrame.plot` and :meth:`Series.plot` where a :class:`DatetimeIndex` with a backwards (descending) time order raised a ``ValueError: Frequency must be positive`` (:issue:`64819`)
+- Bug in :meth:`DataFrame.plot` where plotting with a :class:`TimedeltaIndex` would show tick marks at positions not corresponding to the actual index values, resulting in missing or misaligned axis labels (:issue:`18910`)
 -
 
 Groupby/resample/rolling

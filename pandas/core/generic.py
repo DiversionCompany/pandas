@@ -7915,7 +7915,10 @@ for DataFrame
             is_scalar(to_replace)
             or is_re_compilable(to_replace)
             or is_list_like(to_replace)
+            or not callable(to_replace)  # GH#36522: allow arbitrary Python objects
         ):
+            # to_replace is callable but not a regex pattern (e.g. a lambda);
+            # this is not a valid replacement pattern.
             raise TypeError(
                 "Expecting 'to_replace' to be either a scalar, array-like, "
                 "dict or None, got invalid type "

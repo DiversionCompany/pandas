@@ -110,7 +110,12 @@ class TestDatetime64ArrayLikeComparisons:
     ):
         tz = tz_naive_fixture
 
-        dta = date_range("1970-01-01", freq="ns", periods=10, tz=tz)._data
+        # GH#64281: Use 2000-01-01 instead of 1970-01-01 to avoid
+        # negative timestamps that cause OSError on Windows when
+        # tz=tzlocal() with a negative UTC offset (e.g. UTC-8).
+        # dateutil's DST check calls time.localtime(negative_value) which
+        # fails on Windows but succeeds on Linux.
+        dta = date_range("2000-01-01", freq="ns", periods=10, tz=tz)._data
         obj = tm.box_expected(dta, box_with_array)
         assert_invalid_comparison(obj, other, box_with_array)
 

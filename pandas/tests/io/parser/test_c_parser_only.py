@@ -704,3 +704,30 @@ def test_number_with_trailing_space_not_integer(c_parser_only):
     assert result2.index.dtype != np.dtype("int64"), (
         "Index '1 ' (with trailing space) should not be integer"
     )
+
+
+def test_thousands_separator_trailing_space_not_integer(c_parser_only):
+    # GH#64655 - With thousands separator, C engine should not convert "1 ,"
+    # to integer when "," is the thousands separator and ";" is the delimiter.
+    # The Python engine correctly keeps "1 ," as a string in this case.
+    import pandas as pd
+
+    parser = c_parser_only
+
+    # With sep=";", the whole "1 ," is a single field.
+    # With thousands=",", the "," is a thousands separator.
+    # After stripping the thousands separator, "1 " has a trailing space,
+    # which should prevent integer conversion.
+    txt1 = "a\n1 ,\n"
+    result_c = parser.read_csv(StringIO(txt1), sep=";", thousands=",")
+    result_python = pd.read_csv(StringIO(txt1), sep=";", thousands=",", engine="python")
+
+    # C engine result should match Python engine result
+    assert result_c["a"].dtype == result_python["a"].dtype, (
+        f"C engine dtype {result_c['a'].dtype} should match "
+        f"Python engine dtype {result_python['a'].dtype}"
+    )
+    # The value should NOT be integer 1; it should be string "1 ,"
+    assert result_c["a"].dtype != np.dtype("int64"), (
+        "Value '1 ,' with thousands=',' should not be integer"
+    )

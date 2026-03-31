@@ -498,6 +498,28 @@ class TestReaders:
         with pytest.raises(ValueError, match=msg):
             pd.read_excel("test1" + read_ext, usecols=["E1", 0])
 
+    def test_usecols_no_mangle_from_unselected_duplicates(self, read_ext, tmp_excel):
+        # GH#64198: Duplicate column names that exist only in unselected columns
+        # should not cause the selected column names to be mangled with ".N" suffix.
+        if read_ext in (".xlsb", ".xls"):
+            pytest.skip(f"No engine for filetype: '{read_ext}'")
+
+        # Write spreadsheet with duplicate column names: ["A", "A", "B"]
+        df_write = DataFrame([[1, 2, 3]], columns=["A", "A", "B"])
+        df_write.to_excel(tmp_excel, index=False)
+
+        # usecols selects columns at integer positions [1, 2] ("A" and "B").
+        # The "A" at position 1 should NOT be renamed to "A.1" just because
+        # there is another "A" at position 0 that is not selected.
+        result = pd.read_excel(tmp_excel, usecols=[1, 2])
+        expected = DataFrame({"A": [2], "B": [3]})
+        tm.assert_frame_equal(result, expected)
+
+        # Selecting both duplicate columns should still produce deduplication.
+        result_both = pd.read_excel(tmp_excel, usecols=[0, 1])
+        expected_both = DataFrame({"A": [1], "A.1": [2]})
+        tm.assert_frame_equal(result_both, expected_both)
+
     def test_excel_stop_iterator(self, read_ext):
         parsed = pd.read_excel("test2" + read_ext, sheet_name="Sheet1")
         expected = DataFrame([["aaaa", "bbbbb"]], columns=["Test", "Test1"])

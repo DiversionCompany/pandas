@@ -181,3 +181,31 @@ def test_mangle_cols_names(all_parsers, usecol, engine):
     names = ["A", "A", "B"]
     with pytest.raises(ValueError, match="Duplicate names"):
         parser.read_csv(StringIO(data), names=names, usecols=usecol, engine=engine)
+
+
+def test_usecols_no_mangle_from_unselected_duplicates():
+    # GH#64198: When usecols selects a subset of columns, duplicates that exist
+    # only in unselected columns should not cause the selected column names to
+    # be mangled with a ".N" suffix.
+    import pandas as pd
+
+    # Header has duplicates at positions 0,1 ("A", "A"), but usecols only
+    # selects positions 1 and 2 ("A" at index 1 and "B" at index 2).
+    # The selected "A" should not be renamed to "A.1" just because there is
+    # another "A" at position 0 that is not being selected.
+    data = "A,A,B\n1,2,3"
+    result = pd.read_csv(StringIO(data), usecols=[1, 2], engine="python")
+    expected = DataFrame({"A": [2], "B": [3]})
+    tm.assert_frame_equal(result, expected)
+
+    # When both duplicate "A" columns are selected, dedup should still occur.
+    result_both = pd.read_csv(StringIO(data), usecols=[0, 1], engine="python")
+    expected_both = DataFrame({"A": [1], "A.1": [2]})
+    tm.assert_frame_equal(result_both, expected_both)
+
+    # Duplicate at position 2,3 ("B", "B"), selecting only position 2 should
+    # return "B" (not "B" - already correct, but verify no regression).
+    data2 = "A,B,B,C\n1,2,3,4"
+    result2 = pd.read_csv(StringIO(data2), usecols=[0, 1], engine="python")
+    expected2 = DataFrame({"A": [1], "B": [2]})
+    tm.assert_frame_equal(result2, expected2)

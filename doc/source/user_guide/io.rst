@@ -5171,6 +5171,12 @@ Several caveats.
 * The ``pyarrow`` engine preserves extension data types such as the nullable integer and string data
   type (this can also work for external extension types, requiring the extension type to implement the needed protocols,
   see the :ref:`extension types documentation <extending.extension.arrow>`).
+* When using the ``fastparquet`` engine, older versions of ``fastparquet`` (before the library was
+  updated for pandas 3.x compatibility) may produce incorrect index values when reading parquet files.
+  This is because pandas 3.x :class:`Index` constructors now copy NumPy arrays by default (previously
+  they shared memory), which affects ``fastparquet`` code that relied on the memory-sharing behavior.
+  If you encounter index discarding or corruption when using ``fastparquet``, upgrade ``fastparquet``
+  to the latest version or switch to the ``pyarrow`` engine. (:issue:`64298`)
 
 You can specify an ``engine`` to direct the serialization. This can be one of ``pyarrow``, or ``fastparquet``, or ``auto``.
 If the engine is NOT specified, then the ``pd.options.io.parquet.engine`` option is checked; if this is also ``auto``,

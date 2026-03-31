@@ -47,6 +47,7 @@ Bug fixes
 - Fixed bug in :meth:`Series.mask` and :meth:`DataFrame.mask` where passing a condition containing ``pd.NA`` or ``np.nan`` (object-dtype condition) raised ``TypeError`` instead of treating ``NA``/``NaN`` as ``False`` (i.e. keeping the original value at those positions) (:issue:`35429`)
 - Fixed bug where :meth:`DataFrame.replace` and :meth:`Series.replace` raised ``TypeError`` when replacing arbitrary Python objects (e.g. instances of custom classes) in object-dtype columns (:issue:`36522`)
 - Fixed bug in :class:`~pandas.arrays.ArrowExtensionArray` where string concatenation (``+``) with a scalar string or another Arrow string array raised ``TypeError`` when the array used ``pa.large_string()`` dtype due to type mismatch in PyArrow's ``binary_join_element_wise`` (:issue:`64393`)
+- Added documentation note that older versions of ``fastparquet`` (before pandas 3.x compatibility updates) may produce incorrect index values when reading parquet files, because pandas 3.x :class:`Index` constructors now copy NumPy arrays by default; upgrading ``fastparquet`` or switching to the ``pyarrow`` engine resolves the issue (:issue:`64298`)
 
 .. ---------------------------------------------------------------------------
 .. _whatsnew_302.contributors:

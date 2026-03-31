@@ -296,3 +296,13 @@ def test_interval_array_non_64bit_dtype(dtype_str, expected_subtype):
     right = np.array([1, 2, 3], dtype=expected_subtype)
     result_arrays = IntervalArray.from_arrays(left, right, dtype=dtype_str)
     assert result_arrays.dtype == pd.IntervalDtype(dtype_str, "right")
+
+
+def test_interval_index_astype_float32():
+    # GH#45412: interval_range(1, 10).astype(IntervalDtype("float32")) should
+    # produce IntervalIndex with float32 dtype, not float64
+    dtype = pd.IntervalDtype("float32", "right")
+    ii = pd.interval_range(1, 10)
+    result = ii.astype(dtype)
+    assert result.dtype == dtype, f"Expected {dtype}, got {result.dtype}"
+    assert result.dtype.subtype == np.dtype("float32")

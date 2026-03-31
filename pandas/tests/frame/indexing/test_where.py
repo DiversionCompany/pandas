@@ -1084,3 +1084,28 @@ def test_where_inplace_string_array_consistency():
     df_inplace.where(df_inplace != "", np.nan, inplace=True)
 
     tm.assert_frame_equal(result, df_inplace)
+
+
+def test_where_stringdtype_with_list_other():
+    # GH#63842 - DataFrame[StringDtype].where(DataFrame[bool], list[str])
+    # should return StringDtype, not object dtype
+    df = DataFrame(
+        {"a": ["x", "y", "z"], "b": ["p", "q", "r"]}, dtype=StringDtype()
+    )
+    cond = DataFrame({"a": [True, False, True], "b": [False, True, True]})
+    other = ["new_a", "new_b", "new_c"]
+    result = df.where(cond, other)
+
+    # Result should preserve StringDtype
+    assert result["a"].dtype == StringDtype(), (
+        f"Column 'a' should be StringDtype, got {result['a'].dtype}"
+    )
+    assert result["b"].dtype == StringDtype(), (
+        f"Column 'b' should be StringDtype, got {result['b'].dtype}"
+    )
+
+    # Values: where cond is True keep original, where False use other
+    expected_a = Series(["x", "new_b", "z"], dtype=StringDtype(), name="a")
+    expected_b = Series(["new_a", "q", "r"], dtype=StringDtype(), name="b")
+    tm.assert_series_equal(result["a"], expected_a)
+    tm.assert_series_equal(result["b"], expected_b)

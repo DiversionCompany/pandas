@@ -1685,6 +1685,17 @@ def infer_dtype(value: object, skipna: bool = True) -> str:
     elif hasattr(value, "dtype"):
         inferred = _try_infer_map(value.dtype)
         if inferred is not None:
+            # GH#64196: for typed arrays that support NA (e.g. Period, Interval),
+            # we need to respect `skipna=True`: if all values are NA and skipna
+            # is True, return "empty" (consistent with list/object-array behavior).
+            if (
+                skipna
+                and hasattr(value, "isna")
+                and not cnp.PyArray_DescrCheck(value.dtype)
+            ):
+                na_mask = value.isna()
+                if na_mask.all():
+                    return "empty"
             return inferred
         elif not cnp.PyArray_DescrCheck(value.dtype):
             return "unknown-array"

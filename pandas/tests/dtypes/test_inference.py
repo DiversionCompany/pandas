@@ -1459,6 +1459,22 @@ class TestTypeInference:
         arr = np.array([na_value, Period("2011-01", freq="D"), na_value])
         assert lib.infer_dtype(arr, skipna=True) == "period"
 
+    def test_infer_dtype_period_array_all_nat_skipna(self):
+        # GH#64196: infer_dtype should return "empty" for all-NaT PeriodArray
+        # when skipna=True
+        arr = pd.array([pd.NaT, pd.NaT], dtype="period[D]")
+        assert lib.infer_dtype(arr, skipna=True) == "empty"
+        # with skipna=False, still returns "period"
+        assert lib.infer_dtype(arr, skipna=False) == "period"
+
+    def test_infer_dtype_interval_array_all_na_skipna(self):
+        # GH#64196: infer_dtype should return "empty" for all-NA IntervalArray
+        # when skipna=True
+        arr = pd.arrays.IntervalArray([np.nan, np.nan])
+        assert lib.infer_dtype(arr, skipna=True) == "empty"
+        # with skipna=False, still returns "interval"
+        assert lib.infer_dtype(arr, skipna=False) == "interval"
+
     @pytest.mark.parametrize("na_value", [pd.NA, np.nan])
     def test_infer_dtype_numeric_with_na(self, na_value):
         # GH61621

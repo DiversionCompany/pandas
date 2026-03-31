@@ -97,3 +97,24 @@ def test_mask_na_condition_does_not_raise():
     # Position 0: True -> keep (1); 1: NA -> False -> NA; 2: False -> NA; 3: True -> keep (4)
     expected3 = Series([1.0, np.nan, np.nan, 4.0])
     tm.assert_series_equal(result3, expected3)
+
+
+def test_mask_na_condition_dataframe_convert_dtypes():
+    # GH#35429: The exact issue from the report - DataFrame.mask and where
+    # with pd.NA in a boolean Series (via convert_dtypes) should not raise
+    import pandas as pd
+
+    a = pd.DataFrame([{"col": "a"}] * 3).convert_dtypes()
+    tfna = pd.Series([True, False, pd.NA]).convert_dtypes()
+
+    # mask: True->replace, False->keep, NA->keep (NA treated as False)
+    result_mask = a.mask(tfna, "b")
+    # Position 0: True -> replace with "b"; 1: False -> keep "a"; 2: NA -> keep "a"
+    expected_mask = pd.DataFrame({"col": ["b", "a", "a"]}).convert_dtypes()
+    tm.assert_frame_equal(result_mask, expected_mask)
+
+    # where: True->keep, False->replace, NA->replace (NA treated as False)
+    result_where = a.where(tfna, "b")
+    # Position 0: True -> keep "a"; 1: False -> replace with "b"; 2: NA -> replace with "b"
+    expected_where = pd.DataFrame({"col": ["a", "b", "b"]}).convert_dtypes()
+    tm.assert_frame_equal(result_where, expected_where)

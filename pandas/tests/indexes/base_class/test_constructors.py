@@ -69,3 +69,24 @@ class TestIndexConstructor:
         ser = Series([1, 2], dtype=object)
         idx = Index(ser)
         assert idx._values.flags.writeable
+
+    def test_constructor_numpy_fixed_length_bytes(self):
+        # GH#57645 - numpy fixed-length byte string dtype (|S6) should work as index
+        fixed_strings = ["apple", "banana", "orange", "grape"]
+        arr = np.array(fixed_strings, dtype="S6")
+        assert arr.dtype.kind == "S"
+
+        # Index constructor should work with S-type arrays
+        idx = Index(arr)
+        assert isinstance(idx, Index)
+        assert idx.dtype.kind == "S"
+
+        # set_index should work with S-type arrays
+        df = pd.DataFrame(pd.Series(arr), columns=["fruit"])
+        df.set_index("fruit", inplace=True)
+        assert len(df.index) == 4
+        assert df.index.dtype.kind == "S"
+
+        # Values should be preserved as bytes
+        for val in df.index:
+            assert isinstance(val, bytes)

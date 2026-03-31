@@ -1582,6 +1582,19 @@ class TestLocBaseIndependent:
         with pytest.raises(ValueError, match=msg):
             ser.loc[:] = data
 
+    def test_loc_setitem_2d_array_single_column_consistent_with_setitem(self):
+        # GH#46544 - df.loc[:, col] = 2D_array should be consistent with
+        # df[col] = 2D_array (both store the 2D array in the single column)
+        array_2d = np.zeros((10, 2))
+        df1 = DataFrame(np.zeros((10, 3)))
+        df2 = DataFrame(np.zeros((10, 3)))
+
+        df1[0] = array_2d  # setitem path
+        df2.loc[:, 0] = array_2d  # loc setitem path - should not raise
+
+        # Both should produce the same result
+        tm.assert_frame_equal(df1, df2)
+
     def test_loc_getitem_interval_index(self):
         # GH#19977
         index = pd.interval_range(start=0, periods=3)

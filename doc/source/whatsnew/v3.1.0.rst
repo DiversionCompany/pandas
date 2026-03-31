@@ -182,6 +182,7 @@ Numeric
 - Fixed bug in :meth:`Series.clip` where passing a scalar numpy array (e.g. ``np.array(0)``) would raise a ``TypeError`` (:issue:`59053`)
 - Fixed bug in :meth:`Series.skew` and :meth:`Series.kurt` (and their :class:`DataFrame` counterparts) returning ``0.0`` for degenerate distributions; these now return ``NaN`` (:issue:`62864`)
 - Fixed regression where calling ``np.maximum(series, ...)`` or other numpy ufuncs not dispatched via dunder methods could cause a segfault due to unsafe ``PyArray_DIMS`` access in :class:`NDArrayBacked` when backing a 0-dimensional array (:issue:`60611`)
+- Fixed regression where calling numpy ufuncs with a ``where`` keyword argument containing a pandas :class:`Series` (e.g. ``np.maximum(series, 0, where=series > 2)``) caused infinite recursion and a segfault (:issue:`60611`)
 - Fixed regression where :func:`numpy.logical_or`, :func:`numpy.logical_and`, :func:`numpy.logical_xor`, and :func:`numpy.logical_not` on :class:`Series` would behave erratically (e.g. not preserving nullable boolean dtype, not aligning indexes) by dispatching through pandas' dunder method path (:issue:`54416`)
 
 Conversion

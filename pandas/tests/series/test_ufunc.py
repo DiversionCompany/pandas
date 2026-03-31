@@ -536,3 +536,17 @@ def test_np_maximum_with_nan(ufunc):
     result = ufunc(s, 2.0)
     expected = pd.Series(ufunc(s.to_numpy(), 2.0))
     tm.assert_series_equal(result, expected)
+
+
+def test_np_maximum_with_where_series():
+    # GH#60611: np.maximum(series, scalar, where=boolean_series) caused infinite
+    # recursion because the `where` kwarg (a boolean Series) triggered
+    # __array_ufunc__ again. Fix ensures pandas objects in kwargs are
+    # converted to numpy arrays before calling the ufunc.
+    s = pd.Series([-3.22, 4.0])
+    where = s > 2  # pd.Series([False, True])
+    # This should not segfault or recurse infinitely.
+    # We just verify the call completes without error.
+    result = np.maximum(s, 0, where=where)
+    # Result is a numpy array; at position where=True (index 1), value is max(4.0, 0) = 4.0
+    assert result[1] == 4.0

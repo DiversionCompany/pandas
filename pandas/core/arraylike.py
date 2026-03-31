@@ -399,6 +399,13 @@ def array_ufunc(self, ufunc: np.ufunc, method: str, *inputs: Any, **kwargs: Any)
     elif self.ndim == 1:
         # ufunc(series, ...)
         inputs = tuple(extract_array(x, extract_numpy=True) for x in inputs)
+        # GH#60611: Also convert any pandas objects in kwargs (e.g. `where=series`)
+        # to numpy arrays. If left as pandas Series/DataFrame, they would trigger
+        # __array_ufunc__ again causing infinite recursion.
+        kwargs = {
+            key: np.asarray(val) if isinstance(val, ABCNDFrame) else val
+            for key, val in kwargs.items()
+        }
         result = getattr(ufunc, method)(*inputs, **kwargs)
     # ufunc(dataframe)
     elif method == "__call__" and not kwargs:

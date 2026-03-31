@@ -395,6 +395,14 @@ def format_dateaxis(
                 subplot.xaxis.converter = PeriodConverter()
 
     elif isinstance(index, ABCTimedeltaIndex):
+        import matplotlib as mpl
+
+        # GH#18910 - set a FixedLocator so that tick marks appear at the actual
+        # index positions (in nanoseconds) rather than at positions chosen by
+        # matplotlib's AutoLocator, which may not align with the data.
+        subplot.xaxis.set_major_locator(
+            mpl.ticker.FixedLocator(index.asi8.tolist())
+        )
         subplot.xaxis.set_major_formatter(TimeSeries_TimedeltaFormatter(index.unit))
     else:
         raise TypeError("index type not supported")

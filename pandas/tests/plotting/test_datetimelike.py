@@ -1622,6 +1622,24 @@ class TestTSPlot:
         _, ax = mpl.pyplot.subplots()
         _check_plot_works(s.plot, ax=ax)
 
+    def test_timedelta_dataframe_tick_labels(self):
+        # GH#18910 - DataFrame plot with TimedeltaIndex should show tick labels
+        # at actual index positions, not at positions chosen by AutoLocator
+        index = timedelta_range("0", periods=5, freq="1 D")
+        df = DataFrame(
+            np.random.default_rng(2).standard_normal((5, 2)),
+            index=index,
+            columns=["a", "b"],
+        )
+        _, ax = mpl.pyplot.subplots()
+        df.plot(ax=ax)
+        # Ticks should be at the actual index positions (in nanoseconds)
+        ticks = ax.get_xticks()
+        expected_ticks = index.asi8.tolist()
+        assert list(ticks) == expected_ticks, (
+            f"Expected ticks at {expected_ticks}, got {list(ticks)}"
+        )
+
     def test_hist(self):
         # https://github.com/matplotlib/matplotlib/issues/8459
         rng = date_range("1/1/2011", periods=10, freq="h")

@@ -152,7 +152,9 @@ def _coerce_to_data_and_mask(values, dtype, copy: bool, dtype_cls: type[NumericD
     if isinstance(values, cls):
         values, mask = values._data, values._mask
         if dtype is not None:
-            values = values.astype(dtype.numpy_dtype, copy=False)
+            # GH#55232: use _safe_cast to raise on out-of-range values instead
+            # of silently wrapping/truncating (e.g. uint64 -> int64 overflow)
+            values = dtype_cls._safe_cast(values, dtype.numpy_dtype, copy=False)
 
         if copy:
             values = values.copy()

@@ -2878,3 +2878,26 @@ def test_stack_nat_in_datetimeindex_multiindex():
     )
     expected = Series([1, 4, 2, 5, 3, 6], index=expected_index)
     tm.assert_series_equal(result, expected)
+
+
+def test_stack_nat_in_column_multiindex():
+    # GH#57152 - df.stack() returns wrong data when NaT appears in column MultiIndex
+    # (original issue case)
+    df = DataFrame(
+        data=[[1, 2, 3]],
+        columns=MultiIndex.from_tuples(
+            [
+                ("MAT", pd.Timestamp("2021-12-01"), "a"),
+                ("ignore", pd.Timestamp("1970-12-01"), "a"),
+                ("ignore", pd.NaT, "a"),
+            ],
+            names=("date_type", "date", "value_type"),
+        ),
+    )
+    # Stacking all column levels should correctly associate data with MAT date_type
+    stacked = df.stack(df.columns.names)
+    mat_dates = stacked.xs("MAT", level="date_type").index.get_level_values("date")
+    # The MAT date should be 2021-12-01 only; NaT from 'ignore' should not
+    # contaminate MAT rows
+    assert len(mat_dates) == 1
+    assert mat_dates[0] == pd.Timestamp("2021-12-01")

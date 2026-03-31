@@ -35,6 +35,7 @@ Other enhancements
 - Display formatting for float sequences in DataFrame cells now respects the ``display.precision`` option (:issue:`60503`).
 - Improved the precision of float parsing in :func:`read_csv` (:issue:`64395`)
 - Improved the string ``repr`` of :class:`pd.core.arrays.SparseArray` (:issue:`64547`)
+- :class:`Interval` with tz-naive :class:`Timestamp` endpoints now omits the hour, minute, and second components in ``repr`` and ``str`` when both endpoints are at midnight (00:00:00), showing only the date (:issue:`57748`)
 
 .. ---------------------------------------------------------------------------
 .. _whatsnew_310.notable_bug_fixes:
@@ -193,7 +194,6 @@ Strings
 
 Interval
 ^^^^^^^^
-- Bug in :class:`Interval` where ``repr`` and ``str`` of an :class:`Interval` with :class:`Timestamp` endpoints did not always show the hour, minute, and second components (:issue:`57748`)
 -
 
 Indexing

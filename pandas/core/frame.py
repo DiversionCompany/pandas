@@ -18577,11 +18577,22 @@ class DataFrame(NDFrame, OpsMixin):
         elif isinstance(values, Series):
             if not values.index.is_unique:
                 raise ValueError("cannot compute isin with a duplicate axis.")
-            result = self.eq(values.reindex_like(self), axis="index")
+            aligned_values = values.reindex_like(self)
+            result = self.eq(aligned_values, axis="index")
+            # GH#35565: NA/None values in self should match NA/None in values
+            # at the same index position (isin semantics: NA matches NA)
+            self_na = self.isna()
+            values_na = aligned_values.isna()
+            # Broadcast values_na (1D) across columns using apply
+            result = result | self_na.apply(lambda col: col & values_na)
         elif isinstance(values, DataFrame):
             if not (values.columns.is_unique and values.index.is_unique):
                 raise ValueError("cannot compute isin with a duplicate axis.")
-            result = self.eq(values.reindex_like(self))
+            aligned_values = values.reindex_like(self)
+            result = self.eq(aligned_values)
+            # GH#35565: NA/None values in self should match NA/None in values
+            # at aligned positions (isin semantics: NA matches NA)
+            result = result | (self.isna() & aligned_values.isna())
         else:
             if not is_list_like(values):
                 raise TypeError(

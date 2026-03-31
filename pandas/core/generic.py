@@ -10741,6 +10741,18 @@ for DataFrame
         if not hasattr(cond, "__invert__"):
             cond = np.array(cond)
 
+        # GH#35429: handle NA/NaN in object-dtype condition before inversion.
+        # Fill NA with False so that NA positions become True after ~cond,
+        # meaning those positions will be replaced (NA propagates to result).
+        if isinstance(cond, (ABCSeries, ABCDataFrame)):
+            needs_fill = (
+                (cond.dtypes == object).any()
+                if isinstance(cond, ABCDataFrame)
+                else cond.dtype == object
+            )
+            if needs_fill:
+                cond = cond.fillna(False).infer_objects()
+
         return self._where(
             ~cond,
             other=other,

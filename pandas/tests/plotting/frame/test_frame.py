@@ -1051,6 +1051,23 @@ class TestDataFramePlots:
         _check_ticks_props(ax, xrot=35, xlabelsize=10, ylabelsize=10)
 
     @pytest.mark.slow
+    def test_bar_multi_column_x(self):
+        # GH#21386 - bar/barh should support a list of column labels for x
+        df = DataFrame(
+            {
+                "fruit": ["apple", "banana", "cherry"],
+                "animal": ["cat", "dog", "elephant"],
+                "size": [1, 2, 3],
+            }
+        )
+        # Should not raise ValueError: "x must be a label or position"
+        ax = _check_plot_works(df.plot.bar, x=["fruit", "animal"], y="size")
+        # The resulting index is a MultiIndex
+        assert ax is not None
+
+        ax = _check_plot_works(df.plot.barh, x=["fruit", "animal"], y="size")
+        assert ax is not None
+
     def test_plot_barh_ticks(self):
         df = DataFrame({"a": [0, 1], "b": [1, 0]})
         ax = _check_plot_works(df.plot.barh)

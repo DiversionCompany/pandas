@@ -643,6 +643,11 @@ class Index(IndexOpsMixin, PandasObject):
         elif issubclass(dtype.type, str) or is_numeric_dtype(dtype):
             return Index
 
+        elif dtype.kind == "S":
+            # GH#57645 - numpy fixed-length byte string dtype (e.g. |S6)
+            # should be supported as an Index dtype
+            return Index
+
         raise NotImplementedError(dtype)
 
     # NOTE for new Index creation:

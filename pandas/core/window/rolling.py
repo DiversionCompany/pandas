@@ -706,8 +706,17 @@ class BaseWindowGroupby(BaseWindow):
         )
         # Reconstruct the resulting MultiIndex
         # 1st set of levels = group by labels
-        # 2nd set of levels = original DataFrame/Series index
-        grouped_object_index = self.obj.index
+        # 2nd set of levels = original DataFrame/Series index, or the "on"
+        # column when on= is specified (GH#43405).
+        if self.on is not None and not isinstance(self.on, Index):
+            # When on= specifies a column, use that column's values as the
+            # second level of the MultiIndex so that both
+            # groupby().rolling(on=col).agg() (DataFrame) and
+            # groupby().rolling(on=col)[col2].agg() (Series) produce
+            # consistent index results.
+            grouped_object_index = self._on
+        else:
+            grouped_object_index = self.obj.index
         grouped_index_name = [*grouped_object_index.names]
         groupby_keys = copy.copy(self._grouper.names)
         result_index_names = groupby_keys + grouped_index_name

@@ -1529,6 +1529,13 @@ fallback:
   uint64_t mantissa = 0;
 
   // Process string of digits.
+  // Skip leading zeros: they do not consume any of the max_digits precision
+  // budget. Counting them would cause significant digits to be dropped for
+  // strings like "000000000010084566" (GH#64184).
+  while (*p == '0') {
+    p++;
+    p += (tsep != '\0' && *p == tsep);
+  }
   while (isdigit_ascii(*p)) {
     if (num_digits < max_digits) {
       mantissa = mantissa * 10 + (*p - '0');

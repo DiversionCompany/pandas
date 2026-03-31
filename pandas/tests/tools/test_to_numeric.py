@@ -910,3 +910,50 @@ def test_large_exponent_coerce():
     result = to_numeric(ser, errors="coerce")
     expected = Series([np.inf])
     tm.assert_series_equal(result, expected)
+
+
+def test_leading_zeros_precision_gh64184():
+    # GH#64184 - strings with many leading zeros should convert consistently
+    # regardless of whether other values force float output.
+    # The C parser previously counted leading zeros against the max-digits
+    # budget, causing precision loss (e.g. "000000000010084566" -> 10084560.0).
+
+    # All-integer: should work correctly (control case)
+    int_only = Series([0, 10084566, "10084566", "000000000010084566"])
+    result_int = to_numeric(int_only)
+    expected_int = Series([0, 10084566, 10084566, 10084566], dtype=np.int64)
+    tm.assert_series_equal(result_int, expected_int)
+
+    # Mixed with float: forces float output; leading-zero string must still
+    # round-trip correctly.
+    int_with_float = Series([0, 10084566.0, "10084566", "000000000010084566"])
+    result_float = to_numeric(int_with_float)
+    expected_float = Series(
+        [0.0, 10084566.0, 10084566.0, 10084566.0], dtype=np.float64
+    )
+    tm.assert_series_equal(result_float, expected_float, check_exact=True)
+
+    # Mixed with NA: also forces float output.
+    int_with_missings = Series([pd.NA, 10084566, "10084566", "000000000010084566"])
+    result_na = to_numeric(int_with_missings)
+    expected_na = Series(
+        [np.nan, 10084566.0, 10084566.0, 10084566.0], dtype=np.float64
+    )
+    tm.assert_series_equal(result_na, expected_na, check_exact=True)
+
+    # Mixed with non-numeric strings (errors="coerce"): forces float output.
+    alnum_mix = Series(["TWZ10084566", 10084566, "10084566", "000000000010084566"])
+    result_coerce = to_numeric(alnum_mix, errors="coerce")
+    expected_coerce = Series(
+        [np.nan, 10084566.0, 10084566.0, 10084566.0], dtype=np.float64
+    )
+    tm.assert_series_equal(result_coerce, expected_coerce, check_exact=True)
+
+    # Varying numbers of leading zeros: precision should not degrade.
+    for n_zeros in range(0, 15):
+        val = "0" * n_zeros + "10084566"
+        ser = Series([0.0, val])  # float forces float output
+        result = to_numeric(ser)
+        assert result.iloc[1] == 10084566.0, (
+            f"Leading zeros={n_zeros}: expected 10084566.0, got {result.iloc[1]}"
+        )

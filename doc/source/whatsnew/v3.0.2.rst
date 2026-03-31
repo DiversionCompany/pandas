@@ -42,6 +42,7 @@ Bug fixes
 - Fixed bug where :meth:`Series.str.contains`, :meth:`Series.str.match`, :meth:`Series.str.fullmatch`, :meth:`Series.str.replace`, and :meth:`Series.str.count` raised ``ArrowInvalid`` when using Python-style Unicode escape sequences (e.g. ``\\uXXXX``) in regular expressions with the PyArrow-backed string dtype (:issue:`63901`)
 - Fixed bug where setting values via :meth:`Series.loc` with a partial :class:`MultiIndex` key (e.g. ``ser.loc[0, :]``) produced ``NaN`` values when the right-hand side was a :class:`Series` obtained from the same object (:issue:`46837`)
 - Fixed regression where :meth:`Index.astype` with a NumPy string dtype (e.g. ``np.str_``, ``np.dtype("U10")``) raised ``NotImplementedError`` instead of returning an ``object``-dtype :class:`Index` (:issue:`50127`)
+- Fixed bug in :meth:`Series.mask` and :meth:`DataFrame.mask` where passing a condition containing ``pd.NA`` or ``np.nan`` (object-dtype condition) raised ``TypeError`` instead of treating ``NA``/``NaN`` as ``False`` (i.e. keeping the original value at those positions) (:issue:`35429`)
 
 .. ---------------------------------------------------------------------------
 .. _whatsnew_302.contributors:

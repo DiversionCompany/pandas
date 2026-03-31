@@ -281,6 +281,23 @@ def test_cut_series_with_nan():
     assert not isna(result.iloc[4])
 
 
+def test_cut_series_nan_matches_list_input():
+    # GH#55684 - pd.cut result for Series should match pd.cut result for list
+    # when input contains NaN. Previously pd.cut(series, 2) raised
+    # TypeError: putmask: first argument must be an array
+    list_input = [1.1, 2.2, 3.3, float("nan")]
+    series_input = Series(list_input)
+
+    result_list = cut(list_input, 2)
+    result_series = cut(series_input, 2)
+
+    # Series result should have same categories as list result
+    tm.assert_index_equal(result_list.categories, result_series.cat.categories)
+    # NaN position should be NaN in both
+    assert isna(result_list[3])
+    assert isna(result_series.iloc[3])
+
+
 def test_cut_series_all_nan():
     # GH#55684 - pd.cut should raise a clear error when all values are NaN
     s = Series([np.nan, np.nan, np.nan])

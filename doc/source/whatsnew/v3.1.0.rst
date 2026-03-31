@@ -153,6 +153,7 @@ Bug fixes
 - Bug in :meth:`DataFrame.isin` when ``values`` is a :class:`Series` or :class:`DataFrame` containing ``None``/``NaN`` values: ``None``/``NaN`` in the DataFrame was not recognized as being contained in ``values`` even when the aligned position in ``values`` was also ``None``/``NaN`` (:issue:`35565`)
 - Fix bug in :func:`to_datetime` that could give an unnecessary ``RuntimeWarning`` when converting DataFrame containing missing values (:issue:`64141`)
 - Bug in :class:`DataFrame` constructor where passing a :class:`~collections.UserList` (or other non-list :class:`~collections.abc.Sequence`) raised an ``AttributeError`` (:issue:`41682`)
+- Bug in :meth:`DataFrame.to_string` where setting ``display.width`` to a large value did not prevent rows from being shown as ``"..."`` (ellipsis) when the wide column appeared after a narrow column (:issue:`21337`)
 
 Categorical
 ^^^^^^^^^^^

@@ -588,6 +588,28 @@ class TestDataFrameAnalytics:
         assert result_std.dtype == np.float64
         tm.assert_series_equal(result_std, expected_std, check_names=False)
 
+    def test_var_axis1_original_issue_example(self):
+        # GH#55194: the exact example from the original issue with large DataFrame
+        df = DataFrame(
+            {
+                "A": [1, -2, 3, -4, 5] * 300,
+                "B": [1.0, -2, 3, -4, 5] * 300,
+                "C": [-6.0, -7, -8, -9, 10] * 300,
+                "D": [True, False, True, False, False] * 300,
+            },
+            index=range(10, 15001, 10),
+        )
+        result = df.var(axis=1)
+        assert result.dtype == np.float64, f"Expected float64, got {result.dtype}"
+        assert len(result) == 1500
+
+        # Verify first value: var([1, 1.0, -6.0, True]) = var([1, 1, -6, 1])
+        # mean = (1+1-6+1)/4 = -0.75
+        # var = ((1-(-0.75))^2 + (1-(-0.75))^2 + (-6-(-0.75))^2 + (1-(-0.75))^2) / 3
+        #     = (1.75^2 + 1.75^2 + (-5.25)^2 + 1.75^2) / 3
+        #     = (3.0625 + 3.0625 + 27.5625 + 3.0625) / 3 = 36.75 / 3 = 12.25
+        assert abs(result.iloc[0] - 12.25) < 1e-10
+
     @pytest.mark.parametrize("meth", ["sem", "var", "std"])
     def test_numeric_only_flag(self, meth):
         # GH 9201

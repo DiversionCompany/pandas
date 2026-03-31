@@ -158,3 +158,27 @@ def test_from_arrow_from_raw_struct_array():
 
     result = dtype.__from_arrow__(pa.chunked_array([arr]))
     tm.assert_extension_array_equal(result, expected)
+
+
+def test_from_arrow_nullable_subtype():
+    # GH#64297: IntervalDtype.__from_arrow__ should not raise TypeError when
+    # subtype is a nullable ExtensionDtype (e.g. Int64Dtype)
+    pa = pytest.importorskip("pyarrow")
+
+    arr = pa.array([{"left": 1, "right": 2}, {"left": 3, "right": 4}])
+    dtype = pd.IntervalDtype("Int64", closed="right")
+
+    # Should not raise TypeError: Cannot interpret 'Int64Dtype()' as a data type
+    result = dtype.__from_arrow__(arr)
+    assert isinstance(result, IntervalArray)
+    assert len(result) == 2
+
+    # Also test with chunked array
+    result_chunked = dtype.__from_arrow__(pa.chunked_array([arr]))
+    tm.assert_extension_array_equal(result, result_chunked)
+
+    # Test empty array case
+    empty_arr = pa.chunked_array([], type=arr.type)
+    result_empty = dtype.__from_arrow__(empty_arr)
+    assert isinstance(result_empty, IntervalArray)
+    assert len(result_empty) == 0

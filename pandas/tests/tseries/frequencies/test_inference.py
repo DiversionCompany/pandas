@@ -569,3 +569,32 @@ def test_infer_freq_no_stateful_behavior():
 
     # After calling on full index, slice should still return "D"
     assert frequencies.infer_freq(times[:3]) == "D"
+
+
+@pytest.mark.parametrize(
+    "freq, expected",
+    [
+        # GH#63791: multi-quarterly frequencies with non-OCT/NOV/DEC anchors
+        # should infer the correct anchor month, not the canonical mod-3 month.
+        # 2BQS-JAN: every 2 business-quarter-starts in Jan/Jul cycle
+        ("2BQS-JAN", "2BQS-JAN"),
+        ("2BQS-APR", "2BQS-APR"),
+        ("2BQS-JUL", "2BQS-JUL"),
+        ("2BQS-OCT", "2BQS-OCT"),
+        ("2BQS-FEB", "2BQS-FEB"),
+        ("2BQS-NOV", "2BQS-NOV"),
+        # Single-quarter BQS: canonical mapping to OCT/NOV/DEC family
+        ("BQS-JAN", "BQS-OCT"),
+        ("BQS-APR", "BQS-OCT"),
+        ("BQS-JUL", "BQS-OCT"),
+        ("BQS-OCT", "BQS-OCT"),
+        ("BQS-FEB", "BQS-NOV"),
+        ("BQS-MAY", "BQS-NOV"),
+        ("BQS-MAR", "BQS-DEC"),
+        ("BQS-JUN", "BQS-DEC"),
+    ],
+)
+def test_infer_freq_bqs(freq, expected):
+    # GH#63791
+    index = DatetimeIndex(date_range("2000-01-01", periods=5, freq=freq).values)
+    assert frequencies.infer_freq(index) == expected

@@ -205,3 +205,44 @@ class TestSeriesConcat:
         )
 
         tm.assert_series_equal(result, expected)
+
+    def test_concat_series_overlapping_interval_names_three_series(self):
+        # GH#64825 - concat three Series with overlapping Interval names
+        value_index = IntervalIndex.from_tuples([(0.0, 1.0), (1.0, 2.0)], name="foo")
+        level_index = IntervalIndex.from_tuples(
+            [(0.0, 5.0), (0.0, 10.0), (0.0, 20.0)], name="bar"
+        )
+
+        values = [
+            Series([1.0, 2.0], name=Interval(0.0, 5.0), index=value_index),
+            Series([3.0, 4.0], name=Interval(0.0, 10.0), index=value_index),
+            Series([5.0, 6.0], name=Interval(0.0, 20.0), index=value_index),
+        ]
+
+        result = concat(values, keys=level_index, levels=[level_index], names=["bar"])
+
+        expected = Series(
+            [1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+            index=MultiIndex.from_product([level_index, value_index]),
+        )
+
+        tm.assert_series_equal(result, expected)
+
+    def test_concat_series_overlapping_interval_names_integer_intervals(self):
+        # GH#64825 - concat Series with overlapping integer Interval names
+        value_index = IntervalIndex.from_tuples([(0, 1), (1, 2)], name="x")
+        level_index = IntervalIndex.from_tuples([(0, 5), (0, 10)], name="y")
+
+        values = [
+            Series([10, 20], name=Interval(0, 5), index=value_index),
+            Series([30, 40], name=Interval(0, 10), index=value_index),
+        ]
+
+        result = concat(values, keys=level_index, levels=[level_index], names=["y"])
+
+        expected = Series(
+            [10, 20, 30, 40],
+            index=MultiIndex.from_product([level_index, value_index]),
+        )
+
+        tm.assert_series_equal(result, expected)

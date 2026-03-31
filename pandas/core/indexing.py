@@ -2585,6 +2585,13 @@ class _iLocIndexer(_LocationIndexer):
             # cast lists to array
             value = np.array(value, dtype=object)
         if len(ilocs) != value.shape[1]:
+            # GH#46544: When a single column is being set with a 2D array whose
+            # second dimension doesn't match 1, store the whole 2D array in that
+            # column. This is consistent with df[col] = 2d_array behavior which
+            # stores the 2D array via _sanitize_column(allow_2d=True).
+            if len(ilocs) == 1:
+                self._setitem_single_column(ilocs[0], value, pi)
+                return
             raise ValueError(
                 "Must have equal len keys and value when setting with an ndarray"
             )

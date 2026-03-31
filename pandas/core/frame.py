@@ -148,6 +148,7 @@ from pandas.core.indexes.api import (
     DatetimeIndex,
     Index,
     PeriodIndex,
+    TimedeltaIndex,
     default_index,
     ensure_index,
     ensure_index_from_sequences,
@@ -6905,6 +6906,19 @@ class DataFrame(NDFrame, OpsMixin):
                 )
 
         index = ensure_index_from_sequences(arrays, names)
+
+        # GH#42747 - Restore freq for DatetimeIndex/TimedeltaIndex that was
+        # lost when the datetime/timedelta column was stored as a 2D array in
+        # the block manager (freq is only tracked for 1D arrays).  When
+        # len >= 3, infer the freq from the resulting index values so that
+        # set_index preserves the same freq that was present on the original
+        # DatetimeIndex/TimedeltaIndex.
+        if (
+            isinstance(index, (DatetimeIndex, TimedeltaIndex))
+            and index.freq is None
+            and len(index) >= 3
+        ):
+            index = index._with_freq("infer")
 
         if verify_integrity and not index.is_unique:
             duplicates = index[index.duplicated()].unique()

@@ -113,6 +113,7 @@ Deprecations
 Performance improvements
 ~~~~~~~~~~~~~~~~~~~~~~~~
 - Performance improvement in casting integer and boolean dtypes to ``string[pyarrow]`` by using PyArrow's native cast instead of element-wise conversion (:issue:`56505`)
+- Performance improvement in :class:`~pandas.arrays.ArrowStringArray` when indexing with an empty array, avoiding an unnecessary cast from ``pa.string()`` to ``pa.large_string()`` (:issue:`58651`)
 - Performance improvement in :meth:`DataFrame.__getitem__` when selecting a
   single column by label on a :class:`DataFrame` with duplicate column names.
   (:issue:`64126`).

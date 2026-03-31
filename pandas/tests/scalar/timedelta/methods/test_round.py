@@ -211,3 +211,13 @@ class TestTimedeltaRound:
         res = td_days.round("ms")
         assert res == td_days
         assert res._creso == td_days._creso
+
+        # Test the exact example from GH#64828 (without explicit as_unit)
+        # pd.Timedelta(1.0, unit='days') internally stores as seconds resolution
+        td_orig = Timedelta(1.0, unit="days")
+        res = td_orig.round("100ms")
+        assert res == td_orig
+        res = td_orig.floor("100ms")
+        assert res == td_orig
+        res = td_orig.ceil("100ms")
+        assert res == td_orig

@@ -1885,6 +1885,15 @@ class Series(base.IndexOpsMixin, NDFrame):  # type: ignore[misc]
         # GH16122
         into_c = com.standardize_mapping(into)
 
+        # GH#25408: warn when the index is not unique, as duplicate index labels
+        # cause data loss (only the last value for each label is kept).
+        if not self.index.is_unique:
+            warnings.warn(
+                "Series index is not unique, some values will be omitted.",
+                UserWarning,
+                stacklevel=find_stack_level(),
+            )
+
         if is_object_dtype(self.dtype) or isinstance(self.dtype, ExtensionDtype):
             return into_c((k, maybe_box_native(v)) for k, v in self.items())
         else:

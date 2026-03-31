@@ -2,6 +2,37 @@ from __future__ import annotations
 
 __docformat__ = "restructuredtext"
 
+# GH#64023: Detect if datetime.datetime has been monkey-patched (e.g. by
+# freezegun) before pandas is imported.  Pandas C extensions inherit from
+# datetime.datetime at the C level, so importing them when the class has been
+# replaced by a larger Python subclass causes binary incompatibility that can
+# lead to a segfault or infinite hang during garbage collection.
+# We raise a clear ImportError here, before any C extension is loaded, so that
+# users see a helpful message instead of a mysterious crash.
+def _check_datetime_not_patched() -> None:
+    import datetime
+
+    if (
+        datetime.datetime.__module__ != "datetime"
+        or datetime.datetime.__name__ != "datetime"
+    ):
+        raise ImportError(
+            "pandas requires that datetime.datetime is the standard CPython "
+            f"implementation, but it has been replaced by "
+            f"{datetime.datetime.__module__}.{datetime.datetime.__name__!r}. "
+            "This is known to happen when using 'freezegun' (or similar "
+            "libraries that monkey-patch the datetime module) before importing "
+            "pandas. "
+            "To avoid a segfault or infinite hang, import pandas before "
+            "activating the datetime mock, e.g. place 'import pandas' at the "
+            "top of your file before any @freeze_time decorator is applied. "
+            "See https://github.com/pandas-dev/pandas/issues/64023"
+        )
+
+
+_check_datetime_not_patched()
+del _check_datetime_not_patched
+
 # Let users know if they're missing any of our hard dependencies
 # except tzdata (see https://github.com/pandas-dev/pandas/issues/63264)
 _hard_dependencies = ("numpy", "dateutil")

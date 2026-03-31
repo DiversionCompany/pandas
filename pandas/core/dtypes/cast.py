@@ -1022,7 +1022,10 @@ def convert_dtypes(
         and isinstance(input_array.dtype, StringDtype)
         and input_array.dtype.na_value is np.nan
     ):
-        inferred_dtype = pandas_dtype_func("string")
+        # GH#64239: preserve the storage from the original dtype so that
+        # convert_dtypes() on a pyarrow-backed string Series does not silently
+        # downgrade to python-backed StringDtype.
+        inferred_dtype = StringDtype(storage=input_array.dtype.storage)
 
     else:
         inferred_dtype = input_array.dtype

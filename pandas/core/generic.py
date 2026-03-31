@@ -4655,25 +4655,27 @@ class NDFrame(PandasObject, indexing.IndexingMixin):
 
     def drop(
         self,
-        labels: IndexLabel | ListLike = None,
+        labels: IndexLabel | ListLike = lib.no_default,
         *,
         axis: Axis = 0,
-        index: IndexLabel | ListLike = None,
-        columns: IndexLabel | ListLike = None,
+        index: IndexLabel | ListLike = lib.no_default,
+        columns: IndexLabel | ListLike = lib.no_default,
         level: Level | None = None,
         inplace: bool = False,
         errors: IgnoreRaise = "raise",
     ) -> Self | None:
         inplace = validate_bool_kwarg(inplace, "inplace")
 
-        if labels is not None:
-            if index is not None or columns is not None:
+        if labels is not lib.no_default:
+            if index is not lib.no_default or columns is not lib.no_default:
                 raise ValueError("Cannot specify both 'labels' and 'index'/'columns'")
             axis_name = self._get_axis_name(axis)
             axes = {axis_name: labels}
-        elif index is not None or columns is not None:
+        elif index is not lib.no_default or columns is not lib.no_default:
             if axis == 1:
                 raise ValueError("Cannot specify both 'axis' and 'index'/'columns'")
+            # GH#63304: use no_default sentinel so that None can be used as a
+            # label value (e.g. when the index contains NA/None labels)
             axes = {"index": index}
             if self.ndim == 2:
                 axes["columns"] = columns
@@ -4685,7 +4687,7 @@ class NDFrame(PandasObject, indexing.IndexingMixin):
         obj = self
 
         for axis, labels in axes.items():
-            if labels is not None:
+            if labels is not lib.no_default:
                 obj = obj._drop_axis(labels, axis, level=level, errors=errors)
 
         if inplace:

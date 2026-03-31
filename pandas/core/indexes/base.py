@@ -6789,7 +6789,14 @@ class Index(IndexOpsMixin, PandasObject):
         # we can return a MultiIndex
         if new_values.size and isinstance(new_values[0], tuple):
             if isinstance(self, MultiIndex):
-                names = self.names
+                # GH#24800: Only preserve names if the new tuple length matches
+                # the number of levels in the original MultiIndex. If the mapper
+                # returns tuples of a different length (e.g. splitting strings),
+                # discard the names to avoid ValueError from length mismatch.
+                if len(self.names) == len(new_values[0]):
+                    names = self.names
+                else:
+                    names = None
             elif self.name:
                 names = [self.name] * len(new_values[0])
             else:

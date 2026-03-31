@@ -182,6 +182,21 @@ def test_map(idx):
     tm.assert_index_equal(result, index)
 
 
+def test_map_different_tuple_length():
+    # GH#24800: MultiIndex.map should not raise ValueError when mapper
+    # returns tuples of a different length than the number of levels.
+    idx = MultiIndex.from_tuples(
+        [("a_1_bar", "d"), ("a_2_bar", "e"), ("b_1_bar", "f"), ("b_2_bar", "g")],
+        names=["b", "c"],
+    )
+    # mapper returns 3-element tuples, but MultiIndex has 2 levels
+    result = idx.map(lambda x: tuple(x[0].split("_")))
+    expected = MultiIndex.from_tuples(
+        [("a", "1", "bar"), ("a", "2", "bar"), ("b", "1", "bar"), ("b", "2", "bar")]
+    )
+    tm.assert_index_equal(result, expected)
+
+
 @pytest.mark.parametrize(
     "mapper",
     [

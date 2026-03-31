@@ -896,3 +896,32 @@ class TestTableOrientReader:
         out = StringIO(df.to_json(orient="table"))
         result = pd.read_json(out, orient="table")
         tm.assert_frame_equal(df, result)
+
+    def test_read_json_table_orient_tz_aware_datetime_string(self):
+        # GH#52595: JSON produced by pandas 1.4.x with UTC timestamps (Z suffix)
+        # and a datetime schema without explicit tz should be readable.
+        # The schema says "type": "datetime" (no tz), but data has "...Z" strings.
+        json_str = (
+            '{"schema": {"fields": ['
+            '{"name": "model", "type": "string"}, '
+            '{"name": "category", "type": "string"}, '
+            '{"name": "error_no", "type": "integer"}, '
+            '{"name": "time", "type": "datetime"}, '
+            '{"name": "message", "type": "string"}], '
+            '"primaryKey": ["model", "category", "error_no"], '
+            '"pandas_version": "1.4.0"}, '
+            '"data": ['
+            '{"model": "modelsearch_candidate2", "category": "WARNING", '
+            '"error_no": 0, "time": "2022-09-12T11:42:33.330Z", '
+            '"message": "PARAMETER ESTIMATE IS NEAR ITS BOUNDARY"}, '
+            '{"model": "modelsearch_candidate4", "category": "WARNING", '
+            '"error_no": 0, "time": "2022-09-12T11:42:33.330Z", '
+            '"message": "PARAMETER ESTIMATE IS NEAR ITS BOUNDARY"}]}'
+        )
+        # Should not raise TypeError
+        result = pd.read_json(
+            StringIO(json_str), typ="frame", orient="table", precise_float=True
+        )
+        assert "time" in result.columns
+        assert result["time"].dtype == np.dtype("datetime64[ns]")
+        assert len(result) == 2

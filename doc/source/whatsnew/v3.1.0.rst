@@ -252,6 +252,7 @@ I/O
   when the requested row count is not a multiple of the chunk size (:issue:`64025`)
 - Fixed :func:`read_json` with ``lines=True`` and ``nrows=0`` to return an empty DataFrame (:issue:`64025`)
 - Bug in :meth:`DataFrame.to_hdf` and :meth:`Series.to_hdf` where a :class:`IntervalIndex` (either as the index or as a column) raised a ``ValueError`` instead of being stored and retrieved correctly (:issue:`38305`)
+- Fixed :func:`read_json` with ``orient='table'`` raising ``TypeError`` when reading JSON produced by pandas 1.x with timezone-aware datetime strings (e.g. ending in ``'Z'``) for datetime columns without an explicit timezone in the schema (:issue:`52595`)
 
 Period
 ^^^^^^

@@ -321,7 +321,7 @@ ExtensionArray
 
 Styler
 ^^^^^^
--
+- Bug in :meth:`Styler.to_typst` where hidden rows or columns (via :meth:`Styler.hide`) still rendered as empty cells ``[]`` in the output; hidden items are now completely omitted from the typst table (:issue:`64663`)
 -
 
 Other

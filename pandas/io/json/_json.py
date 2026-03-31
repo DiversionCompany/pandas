@@ -1226,6 +1226,10 @@ class Parser:
         """
         for axis_name in obj._AXIS_ORDERS:
             ax = obj._get_axis(axis_name)
+            # GH#52595: MultiIndex cannot be used to initialize a Series;
+            # skip axis conversion for MultiIndex axes.
+            if isinstance(ax, MultiIndex):
+                continue
             ser = Series(ax, dtype=ax.dtype, copy=False)
             new_ser, result = self._try_convert_data(
                 name=axis_name,

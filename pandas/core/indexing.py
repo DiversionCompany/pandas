@@ -2677,13 +2677,18 @@ class _iLocIndexer(_LocationIndexer):
             # properly update the column's dtype instead of trying to set
             # inplace. Inplace assignment silently coerces the value to fit
             # the existing object dtype without raising any error.
+            # GH#52825: when the DataFrame is empty and we are setting a
+            # non-empty list-like value, numpy will silently broadcast the
+            # value into the empty array without expanding it (e.g. numpy
+            # allows `np.array([])[slice(None)] = ['abc']` without error).
+            # We must use isetitem to expand the DataFrame correctly.
             col_dtype = self.obj.dtypes.iloc[loc]
             value_dtype = getattr(value, "dtype", None)
             if (
                 col_dtype == object
                 and value_dtype is not None
                 and value_dtype != object
-            ):
+            ) or (self.obj.empty and is_list_like(value) and len(value) > 0):
                 self.obj.isetitem(loc, value)
             else:
                 try:

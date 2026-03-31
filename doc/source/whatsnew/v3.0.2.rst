@@ -36,6 +36,7 @@ Bug fixes
 - Fixed bug in :meth:`DataFrame.sum` crashing on an empty :class:`DataFrame` with both string and numeric columns (:issue:`64657`)
 - Fixed bug where :meth:`DataFrame.div` ignored the ``axis`` argument when used with ``level`` for MultiIndex columns (:issue:`64428`)
 - Fixed regression in :meth:`DataFrame.var`, :meth:`DataFrame.std`, and :meth:`DataFrame.sem` with ``axis=1`` returning ``object`` dtype instead of ``float64`` when the DataFrame contains mixed numeric dtypes (e.g. ``int``, ``float``, ``bool``) (:issue:`55194`)
+- Fixed bug where :meth:`Series.str.contains`, :meth:`Series.str.match`, :meth:`Series.str.fullmatch`, :meth:`Series.str.replace`, and :meth:`Series.str.count` raised ``ArrowInvalid`` when using Python-style Unicode escape sequences (e.g. ``\\uXXXX``) in regular expressions with the PyArrow-backed string dtype (:issue:`63901`)
 
 .. ---------------------------------------------------------------------------
 .. _whatsnew_302.contributors:

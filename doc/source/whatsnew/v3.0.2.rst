@@ -39,6 +39,7 @@ Bug fixes
 - Fixed regression in :meth:`DataFrame.var`, :meth:`DataFrame.std`, and :meth:`DataFrame.sem` with ``axis=1`` returning ``object`` dtype instead of ``float64`` when the DataFrame contains mixed numeric dtypes (e.g. ``int``, ``float``, ``bool``) (:issue:`55194`)
 - Fixed bug where :meth:`Series.str.contains`, :meth:`Series.str.match`, :meth:`Series.str.fullmatch`, :meth:`Series.str.replace`, and :meth:`Series.str.count` raised ``ArrowInvalid`` when using Python-style Unicode escape sequences (e.g. ``\\uXXXX``) in regular expressions with the PyArrow-backed string dtype (:issue:`63901`)
 - Fixed bug where setting values via :meth:`Series.loc` with a partial :class:`MultiIndex` key (e.g. ``ser.loc[0, :]``) produced ``NaN`` values when the right-hand side was a :class:`Series` obtained from the same object (:issue:`46837`)
+- Fixed regression where :meth:`Index.astype` with a NumPy string dtype (e.g. ``np.str_``, ``np.dtype("U10")``) raised ``NotImplementedError`` instead of returning an ``object``-dtype :class:`Index` (:issue:`50127`)
 
 .. ---------------------------------------------------------------------------
 .. _whatsnew_302.contributors:

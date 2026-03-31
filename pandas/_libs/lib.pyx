@@ -2545,6 +2545,14 @@ def maybe_convert_numeric(
                             if as_int <= oINT64_MAX:
                                 ints[i] = as_int
 
+                        # GH#64184: strings with leading zeros (e.g.
+                        # "000000000010084566") are integer-valued but
+                        # floatify() may lose precision in the C parser
+                        # because it counts leading zeros against the
+                        # max-digits budget.  Re-derive the float value
+                        # from the exact Python integer to avoid that.
+                        floats[i] = <float64_t>as_int
+
                     seen.float_ = seen.float_ or (seen.uint_ and seen.sint_)
                 else:
                     seen.float_ = True

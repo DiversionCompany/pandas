@@ -207,6 +207,7 @@ Conversion
 - Fixed bug in :meth:`DataFrame.from_records` where ``exclude`` was ignored when ``data`` was an iterator and ``nrows=0`` (:issue:`63774`)
 - :meth:`DataFrame.to_dict` (with ``orient='dict'``, the default) and :meth:`Series.to_dict` now emit a :class:`UserWarning` when the index is not unique, since duplicate index labels cause silent data loss (only the last value for each label is kept) (:issue:`25408`)
 - Bug in :func:`pandas.array` where passing a multidimensional NumPy array (2-D or higher) with a numeric dtype (e.g. ``int64``, ``float64``) silently created a multidimensional :class:`~pandas.arrays.NumpyExtensionArray`; now consistently raises :class:`ValueError` (:issue:`64280`)
+- Fixed bug in :func:`to_numeric` where strings with many leading zeros (e.g. ``"000000000010084566"``) were silently converted to incorrect ``float64`` values when the result dtype was forced to float; the C parser's digit-precision budget now excludes leading zeros (:issue:`64184`)
 -
 
 Strings

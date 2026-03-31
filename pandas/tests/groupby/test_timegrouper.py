@@ -1085,3 +1085,23 @@ class TestGroupBy:
 
         assert isinstance(result.index, DatetimeIndex)
         assert result.index.tz is not None
+
+    def test_groupby_by_function_tz_naive_result(self):
+        # GH#57192 - the exact issue: when using by=function that converts
+        # tz-aware timestamps to tz-naive, group keys should be tz-naive
+        index = date_range("2024-02-01", "2024-02-03", freq="8h", tz="UTC")
+        df = DataFrame([1] * len(index), index=index)
+
+        def f(ts):
+            """Group by date, returning timezone naive timestamp."""
+            return ts.normalize().tz_convert(None)
+
+        grouped = df.groupby(by=f)
+        keys = list(grouped.groups.keys())
+
+        # All group keys should be tz-naive (no timezone)
+        for key in keys:
+            assert key.tzinfo is None, f"Expected tz-naive key, got {key}"
+
+        # Should have 3 groups (2024-02-01, 2024-02-02, 2024-02-03)
+        assert len(keys) == 3

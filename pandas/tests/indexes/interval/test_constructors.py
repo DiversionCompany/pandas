@@ -181,10 +181,10 @@ class ConstructorTests:
         with pytest.raises(ValueError, match=msg):
             constructor(closed="invalid", **filler)
 
-        # unsupported dtype
-        msg = "dtype must be an IntervalDtype, got int64"
-        with pytest.raises(TypeError, match=msg):
-            constructor(dtype="int64", **filler)
+        # GH#45412: passing a raw dtype as subtype is now supported
+        # dtype="int64" is treated as IntervalDtype("int64")
+        result = constructor(dtype="int64", **filler)
+        assert result.dtype == IntervalDtype("int64", "right")
 
         # invalid dtype
         msg = "data type [\"']invalid[\"'] not understood"

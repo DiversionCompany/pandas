@@ -1032,7 +1032,9 @@ To completely override the default values that are recognized as missing, specif
 .. _io.navaluesconst:
 
 The default ``NaN`` recognized values are ``['-1.#IND', '1.#QNAN', '1.#IND', '-1.#QNAN', '#N/A N/A', '#N/A', 'N/A',
-'n/a', 'NA', '<NA>', '#NA', 'NULL', 'null', 'NaN', '-NaN', 'nan', '-nan', 'None', '']``.
+'n/a', 'NA', '<NA>', '#NA', 'NULL', 'null', 'NaN', '-NaN', 'nan', '-nan', '']``.
+Note that the string ``"None"`` is not treated as a missing value by default; if you want it
+to be recognized as NaN, pass ``na_values=["None"]`` explicitly.
 
 Let us consider some examples:
 

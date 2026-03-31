@@ -131,7 +131,6 @@ def test_default_na_values(all_parsers):
         "-nan",
         "#N/A N/A",
         "",
-        "None",
     }
     assert _NA_VALUES == STR_NA_VALUES
 
@@ -841,4 +840,23 @@ def test_na_values_dict_without_dtype(all_parsers, na_values):
 
     result = parser.read_csv(StringIO(data), na_values=na_values)
     expected = DataFrame({"A": [np.nan, np.nan, np.nan, np.nan]})
+    tm.assert_frame_equal(result, expected)
+
+
+def test_none_string_not_treated_as_na(all_parsers):
+    # GH#52493 - the string "None" should not be treated as NA by default;
+    # this restores the pandas 1.x behavior which was changed in 2.0 by GH#50286
+    parser = all_parsers
+    data = "a\nNone"
+    result = parser.read_csv(StringIO(data))
+    expected = DataFrame({"a": ["None"]})
+    tm.assert_frame_equal(result, expected)
+
+
+def test_none_string_treated_as_na_with_explicit_na_values(all_parsers):
+    # GH#52493 - users who want "None" treated as NA can pass na_values=["None"]
+    parser = all_parsers
+    data = "a\nNone"
+    result = parser.read_csv(StringIO(data), na_values=["None"])
+    expected = DataFrame({"a": [np.nan]})
     tm.assert_frame_equal(result, expected)

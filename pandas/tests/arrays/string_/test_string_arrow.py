@@ -105,6 +105,23 @@ def test_constructor_valid_string_view(chunked):
     assert pa.types.is_large_string(arr._pa_array.type)
 
 
+def test_getitem_empty_preserves_large_string_type():
+    # GH#58651: Regression - empty array indexing should not trigger unnecessary
+    # cast from pa.string() to pa.large_string() in the constructor
+    pa = pytest.importorskip("pyarrow")
+
+    arr = ArrowStringArray._from_sequence(["a", "b", "c"], dtype=StringDtype("pyarrow"))
+    result = arr[np.array([], dtype="int64")]
+    assert len(result) == 0
+    assert pa.types.is_large_string(result._pa_array.type)
+
+    # Also check via boolean mask indexing with all-False mask
+    mask = np.zeros(len(arr), dtype=bool)
+    result_mask = arr[mask]
+    assert len(result_mask) == 0
+    assert isinstance(result_mask, ArrowStringArray)
+
+
 def test_constructor_from_list():
     # GH#27673
     pytest.importorskip("pyarrow")

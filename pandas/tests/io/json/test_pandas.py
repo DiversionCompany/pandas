@@ -340,6 +340,19 @@ class TestPandasContainer:
         result = read_json(data, orient="split")
         tm.assert_frame_equal(result, df)
 
+    def test_roundtrip_multiindex_rows(self):
+        # GH#52595: read_json with orient='split' and MultiIndex row index
+        # should not raise NotImplementedError (regression from 1.5.3 -> 2.0)
+        midx = pd.MultiIndex.from_tuples(
+            [(1, "a"), (2, "b")], names=["num", "letter"]
+        )
+        df = DataFrame({"value": [10, 20]}, index=midx)
+        data = StringIO(df.to_json(orient="split"))
+        # Should not raise NotImplementedError when convert_axes=True (default)
+        result = read_json(data, orient="split")
+        assert isinstance(result.index, pd.MultiIndex)
+        assert result["value"].tolist() == [10, 20]
+
     @pytest.mark.parametrize(
         "data,msg,orient",
         [

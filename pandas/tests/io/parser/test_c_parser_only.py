@@ -690,19 +690,26 @@ def test_number_with_trailing_space_not_integer(c_parser_only):
     # to integer; it should fall back to float or string.
     parser = c_parser_only
 
-    # "1 ," - field value is "1 " (trailing space before delimiter)
-    txt1 = "a\n1 ,\n"
+    # Single column where one value has a trailing space: "1 " must not be int64.
+    # With only "1 " in the column, the dtype should be object (not int64).
+    txt1 = "a\n1 \n2\n"
     result1 = parser.read_csv(StringIO(txt1))
-    # The index "1 " should NOT be integer dtype; it should be float or object.
-    assert result1.index.dtype != np.dtype("int64"), (
-        "Index '1 ' (with trailing space) should not be integer"
+    # Column "a" should NOT be integer dtype because "1 " (with trailing space)
+    # cannot safely be parsed as an integer.
+    assert result1["a"].dtype != np.dtype("int64"), (
+        "Column with value '1 ' (trailing space) should not be integer"
     )
 
-    # "1 ,0" - first field "1 " (trailing space) used as implicit index
-    txt2 = "a\n1 ,0"
+    # Two-column CSV where "1 " appears in the first column.
+    txt2 = "a,b\n1 ,2\n3,4\n"
     result2 = parser.read_csv(StringIO(txt2))
-    assert result2.index.dtype != np.dtype("int64"), (
-        "Index '1 ' (with trailing space) should not be integer"
+    # Column "a" contains "1 " (trailing space) which prevents integer conversion.
+    assert result2["a"].dtype != np.dtype("int64"), (
+        "Column 'a' with value '1 ' (trailing space) should not be integer"
+    )
+    # Column "b" has no trailing spaces, so it should be integer.
+    assert result2["b"].dtype == np.dtype("int64"), (
+        "Column 'b' with clean integer values should be int64"
     )
 
 

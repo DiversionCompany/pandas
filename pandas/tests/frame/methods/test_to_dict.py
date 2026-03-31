@@ -557,3 +557,16 @@ def test_to_dict_orient_dict_no_warn_on_unique_index():
     with tm.assert_produces_warning(None):
         result = df.to_dict()
     assert result == {"a": {0: 1, 1: 2, 2: 3}}
+
+
+def test_to_dict_orient_split_no_data_loss_with_duplicate_index():
+    # GH#25408 - to_dict(orient='split') with duplicate index should not cause
+    # data loss (unlike orient='dict'). The split format includes all rows.
+    df = DataFrame({"a": [1, 2], "b": [3, 4]}, index=["x", "x"])
+    result = df.to_dict(orient="split")
+    # All rows should be present (no data loss for split orient)
+    assert "data" in result
+    assert len(result["data"]) == 2
+    assert result["data"] == [[1, 3], [2, 4]]
+    # Index should list both 'x' entries
+    assert result["index"] == ["x", "x"]

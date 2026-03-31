@@ -562,6 +562,32 @@ class TestDataFrameAnalytics:
             f"Expected float64, got {result_sem.dtype}"
         )
 
+    def test_var_axis1_mixed_dtypes_values_correct(self):
+        # GH#55194: verify values as well as dtype for var/std with axis=1.
+        df = DataFrame(
+            {
+                "A": [1.0, 2.0],
+                "B": [3.0, 4.0],
+            }
+        )
+        # Expected: var([1,3])=2.0, var([2,4])=2.0
+        expected_var = Series([2.0, 2.0], dtype=np.float64)
+        result = df.var(axis=1)
+        assert result.dtype == np.float64
+        tm.assert_series_equal(result, expected_var, check_names=False)
+
+        # With ddof=0: var([1,3])=1.0, var([2,4])=1.0
+        expected_var_ddof0 = Series([1.0, 1.0], dtype=np.float64)
+        result_ddof0 = df.var(axis=1, ddof=0)
+        assert result_ddof0.dtype == np.float64
+        tm.assert_series_equal(result_ddof0, expected_var_ddof0, check_names=False)
+
+        # std: sqrt(2), sqrt(2)
+        expected_std = Series([np.sqrt(2.0), np.sqrt(2.0)], dtype=np.float64)
+        result_std = df.std(axis=1)
+        assert result_std.dtype == np.float64
+        tm.assert_series_equal(result_std, expected_std, check_names=False)
+
     @pytest.mark.parametrize("meth", ["sem", "var", "std"])
     def test_numeric_only_flag(self, meth):
         # GH 9201

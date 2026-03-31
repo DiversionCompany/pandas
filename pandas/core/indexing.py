@@ -2671,30 +2671,45 @@ class _iLocIndexer(_LocationIndexer):
             return
 
         elif is_full_setter:
-            try:
-                self.obj._mgr.column_setitem(
-                    loc, plane_indexer, value, inplace_only=True
-                )
-            except (ValueError, TypeError, LossySetitemError) as exc:
-                # If we're setting an entire column and we can't do it inplace,
-                #  then we can use value's dtype (or inferred dtype)
-                #  instead of object
-                dtype = self.obj.dtypes.iloc[loc]
-                if dtype not in (np.void, object) and not self.obj.empty:
-                    # - Exclude np.void, as that is a special case for expansion.
-                    #   We want to raise for
-                    #       df = pd.DataFrame({'a': [1, 2]})
-                    #       df.loc[:, 'a'] = .3
-                    #   but not for
-                    #       df = pd.DataFrame({'a': [1, 2]})
-                    #       df.loc[:, 'b'] = .3
-                    # - Exclude `object`, as then no upcasting happens.
-                    # - Exclude empty initial object with enlargement,
-                    #   as then there's nothing to be inconsistent with.
-                    raise TypeError(
-                        f"Invalid value '{value}' for dtype '{dtype}'"
-                    ) from exc
+            # GH#52593: When setting an entire column into an object-dtype
+            # column using loc[:, col] = value, if `value` has a non-object
+            # dtype (e.g. Categorical, datetime), we must use isetitem to
+            # properly update the column's dtype instead of trying to set
+            # inplace. Inplace assignment silently coerces the value to fit
+            # the existing object dtype without raising any error.
+            col_dtype = self.obj.dtypes.iloc[loc]
+            value_dtype = getattr(value, "dtype", None)
+            if (
+                col_dtype == object
+                and value_dtype is not None
+                and value_dtype != object
+            ):
                 self.obj.isetitem(loc, value)
+            else:
+                try:
+                    self.obj._mgr.column_setitem(
+                        loc, plane_indexer, value, inplace_only=True
+                    )
+                except (ValueError, TypeError, LossySetitemError) as exc:
+                    # If we're setting an entire column and we can't do it inplace,
+                    #  then we can use value's dtype (or inferred dtype)
+                    #  instead of object
+                    dtype = self.obj.dtypes.iloc[loc]
+                    if dtype not in (np.void, object) and not self.obj.empty:
+                        # - Exclude np.void, as that is a special case for expansion.
+                        #   We want to raise for
+                        #       df = pd.DataFrame({'a': [1, 2]})
+                        #       df.loc[:, 'a'] = .3
+                        #   but not for
+                        #       df = pd.DataFrame({'a': [1, 2]})
+                        #       df.loc[:, 'b'] = .3
+                        # - Exclude `object`, as then no upcasting happens.
+                        # - Exclude empty initial object with enlargement,
+                        #   as then there's nothing to be inconsistent with.
+                        raise TypeError(
+                            f"Invalid value '{value}' for dtype '{dtype}'"
+                        ) from exc
+                    self.obj.isetitem(loc, value)
         else:
             # set value into the column (first attempting to operate inplace, then
             #  falling back to casting if necessary)

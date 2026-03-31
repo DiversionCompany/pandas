@@ -1424,6 +1424,15 @@ def test_dataframe_groupby_apply_lambda_positional_empty(func):
     tm.assert_frame_equal(result, expected)
 
 
+def test_series_groupby_apply_lambda_positional_empty():
+    # GH#46496 - original issue case: SeriesGroupBy.apply with lambda using
+    # positional references should not error on an empty DataFrame/Series
+    empty_df = DataFrame([], columns=["a", "b", "c"])
+    result = empty_df.groupby("a")["b"].apply(lambda x: x[0] - x[1])
+    expected = Series([], dtype=object, name="b")
+    tm.assert_series_equal(result, expected)
+
+
 def test_include_groups():
     # GH#7155
     df = DataFrame({"a": [1, 1, 2], "b": [3, 4, 5]})

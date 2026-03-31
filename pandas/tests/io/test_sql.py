@@ -3955,6 +3955,37 @@ def test_to_sql_preserves_user_registered_sqlite_converters():
         )
 
 
+def test_to_sql_preserves_user_registered_sqlite_converters_on_append():
+    # GH#64337: to_sql() should not override user-registered sqlite3 converters
+    # even when if_exists="append" or if_exists="replace" is used multiple times
+    sentinel = object()
+    results = {}
+
+    def custom_date_converter(val):
+        results["date_converter_called"] = True
+        return sentinel
+
+    # Register custom converter BEFORE calling to_sql
+    sqlite3.register_converter("date", custom_date_converter)
+
+    try:
+        conn = sqlite3.connect(":memory:", detect_types=sqlite3.PARSE_DECLTYPES)
+        try:
+            df = DataFrame({"d": [date(2020, 1, 1)]})
+            df.to_sql("test", conn, if_exists="replace", index=False)
+            # Call again with append to ensure the converter is still preserved
+            df.to_sql("test", conn, if_exists="append", index=False)
+
+            assert sqlite3.converters.get("DATE") is custom_date_converter, (
+                "to_sql() with if_exists='append' must not override user-registered converter"
+            )
+        finally:
+            conn.close()
+    finally:
+        # Restore Python default converters to avoid side effects on other tests
+        sqlite3.register_converter("date", lambda val: date.fromisoformat(val.decode()))
+
+
 @pytest.mark.db
 def test_psycopg2_schema_support(postgresql_psycopg2_engine):
     conn = postgresql_psycopg2_engine

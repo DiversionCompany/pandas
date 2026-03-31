@@ -15719,7 +15719,19 @@ class DataFrame(NDFrame, OpsMixin):
             #  float64, see test_apply_funcs_over_empty
             # GH#64657: skip the float64 cast when string-dtype columns are
             # present, as their sum result ("") cannot be cast to float64.
-            if not any(isinstance(t, StringDtype) for t in df.dtypes):
+            # Also handle ArrowDtype string columns (e.g. string[pyarrow]).
+            def _is_string_ext_dtype(t) -> bool:
+                if isinstance(t, StringDtype):
+                    return True
+                if isinstance(t, ArrowDtype):
+                    import pyarrow as pa
+
+                    return pa.types.is_string(
+                        t.pyarrow_dtype
+                    ) or pa.types.is_large_string(t.pyarrow_dtype)
+                return False
+
+            if not any(_is_string_ext_dtype(t) for t in df.dtypes):
                 out = out.astype(np.float64)
 
         return out

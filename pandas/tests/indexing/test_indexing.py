@@ -1155,3 +1155,18 @@ def test_setitem_scalar_with_length1_list_integer_indexer():
     ser[indexer] = [99.0]
     expected = Series([99.0, 2.0, 99.0, 4.0, 99.0])
     tm.assert_series_equal(ser, expected)
+
+
+def test_loc_setitem_tuple_in_object_column():
+    # GH#26333: df.loc[row, col] = tuple_value should store the whole tuple
+    # as a single scalar value in an object-dtype column.
+    # This was a regression in 0.23.x: setting a tuple (which has a __len__)
+    # raised "Must have equal len keys and value when setting with an iterable".
+    df = DataFrame({"a": [1, 2, 3], "b": [(1, 2), (1, 2, 3), (3, 4)]})
+
+    # This should not raise ValueError
+    df.loc[0, "b"] = (7, 8, 9)
+
+    assert df.loc[0, "b"] == (7, 8, 9), f"Expected (7, 8, 9), got {df.loc[0, 'b']!r}"
+    assert df.loc[1, "b"] == (1, 2, 3)  # unchanged
+    assert df.loc[2, "b"] == (3, 4)  # unchanged

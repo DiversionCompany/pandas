@@ -2415,3 +2415,17 @@ def test_to_json_null_index(null_value):
     ser = Series([1], index=[null_value])
     result = ser.to_json()
     assert result == '{"null":1}'
+
+
+@pytest.mark.parametrize(
+    "null_value",
+    [np.nan, None, pd.NaT, pd.NA],
+    ids=["np.nan", "None", "pd.NaT", "pd.NA"],
+)
+def test_to_json_null_index_multiple(null_value):
+    # GH#31801 - null-like values in index with multiple elements
+    ser = Series([1, 2], index=[null_value, "a"])
+    result = ser.to_json()
+    # null value should be serialized as "null", not as its string repr
+    assert '"null":1' in result
+    assert '"a":2' in result

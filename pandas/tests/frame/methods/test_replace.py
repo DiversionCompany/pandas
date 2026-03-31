@@ -1594,6 +1594,29 @@ def test_replace_arbitrary_python_objects():
     assert result_ser.iloc[2] is o3
 
 
+def test_replace_custom_class_objects():
+    # GH#36522 - replacing custom class instances should work
+    class Foo:
+        def __init__(self, val):
+            self.val = val
+
+        def __eq__(self, other):
+            return isinstance(other, Foo) and self.val == other.val
+
+    f1 = Foo(1)
+    f2 = Foo(2)
+    f3 = Foo(3)
+
+    df = DataFrame({"a": [f1, f2], "b": [f2, f1]})
+    result = df.replace(to_replace={"a": f1}, value={"a": f3})
+    # f1 in column "a" should be replaced with f3
+    assert result.at[0, "a"] is f3
+    assert result.at[1, "a"] is f2
+    # Column "b" should be unchanged
+    assert result.at[0, "b"] is f2
+    assert result.at[1, "b"] is f1
+
+
 def test_mask_missing_zero_d_array_gh47101():
     # GH#47101: mask_missing raised AttributeError: 'bool' object has no
     # attribute 'to_numpy' when arr is a 0-D numpy array, because arr == value

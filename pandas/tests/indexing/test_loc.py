@@ -3619,3 +3619,32 @@ def test_loc_setitem_extension_array_into_object_series():
     ser.loc[:] = arr
     expected = Series(list(arr), dtype=object)
     tm.assert_series_equal(ser, expected)
+
+
+def test_loc_setitem_2d_ndarray_consistent_with_setitem():
+    # GH#46544 - df.loc[:, cols] = 2D_array should behave consistently
+    # with df[cols] = 2D_array when all rows are selected.
+    # Specifically, both should allow dtype changes (e.g., int -> float).
+    df_ref = DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+
+    # Using __setitem__: should succeed and convert int columns to float
+    df1 = df_ref.copy()
+    arr = np.array([[1.1, 2.2], [3.3, 4.4], [5.5, 6.6]])
+    df1[["a", "b"]] = arr
+
+    # Using .loc with full slice: should behave the same as __setitem__
+    df2 = df_ref.copy()
+    df2.loc[:, ["a", "b"]] = arr
+
+    tm.assert_frame_equal(df1, df2)
+
+
+def test_loc_setitem_2d_ndarray_partial_rows():
+    # GH#46544 - df.loc[partial_rows, cols] = 2D_array should work for partial rows
+    df = DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+    arr = np.array([[10, 20], [30, 40]])  # shape (2, 2) for 2 rows
+
+    df.loc[[0, 1], ["a", "b"]] = arr
+
+    expected = DataFrame({"a": [10, 30, 3], "b": [20, 40, 6]})
+    tm.assert_frame_equal(df, expected)

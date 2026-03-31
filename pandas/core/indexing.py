@@ -2589,12 +2589,22 @@ class _iLocIndexer(_LocationIndexer):
                 "Must have equal len keys and value when setting with an ndarray"
             )
 
+        is_full_setter = com.is_null_slice(pi) or com.is_full_slice(pi, len(self.obj))
+
         for i, loc in enumerate(ilocs):
             value_col = value[:, i]
             if is_object_dtype(value_col.dtype):
                 # casting to list so that we do type inference in setitem_single_column
                 value_col = value_col.tolist()
-            self._setitem_single_column(loc, value_col, pi)
+            if is_full_setter:
+                # GH#46544 - when setting all rows with a 2D ndarray, use isetitem
+                # to allow dtype changes, consistent with DataFrame.__setitem__
+                # (which uses _iset_not_inplace -> self[col] = value_col).
+                # _setitem_single_column with a full slice would attempt inplace
+                # modification and raise TypeError for dtype-incompatible values.
+                self.obj.isetitem(loc, value_col)
+            else:
+                self._setitem_single_column(loc, value_col, pi)
 
     def _setitem_with_indexer_frame_value(
         self, indexer, value: DataFrame, name: str

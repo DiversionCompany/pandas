@@ -704,7 +704,29 @@ class Block(PandasObject, libinternals.Block):
             #  bc _can_hold_element is incorrect.
             return [self._maybe_copy(inplace, deep=False)]
 
-        elif self._can_hold_element(value) or (self.dtype == "string" and is_re(value)):
+        # GH#48034: np.nan must not be silently coerced to NaT when the block
+        # holds datetime64/timedelta64 values.  The _can_hold_element check
+        # accepts float NaN as a stand-in for NaT, but Series.replace should
+        # NOT implicitly convert np.nan → pd.NaT; instead we must upcast.
+        _value_is_float_nan = (
+            lib.is_scalar(value)
+            and lib.is_float(value)
+            and np.isnan(value)
+            and (
+                (
+                    isinstance(self.values.dtype, np.dtype)
+                    and self.values.dtype.kind in "mM"
+                )
+                or isinstance(self.values.dtype, DatetimeTZDtype)
+            )
+        )
+        if (
+            not _value_is_float_nan
+            and (
+                self._can_hold_element(value)
+                or (self.dtype == "string" and is_re(value))
+            )
+        ):
             # TODO(CoW): Maybe split here as well into columns where mask has True
             # and rest?
             blk = self._maybe_copy(inplace)
@@ -712,7 +734,7 @@ class Block(PandasObject, libinternals.Block):
             return [blk]
 
         elif self.ndim == 1 or self.shape[0] == 1:
-            if value is None or value is NA:
+            if value is None or value is NA or _value_is_float_nan:
                 blk = self.astype(np.dtype(object))
             else:
                 blk = self.coerce_to_target_dtype(value, raise_on_upcast=False)

@@ -1043,3 +1043,14 @@ class TestSeriesPlots:
         # Values should be plotted as float (nanoseconds)
         bars = ax.patches
         assert len(bars) == 3
+
+    def test_barh_plot_timedelta_dtype(self):
+        # GH#39320 - Series.plot.barh() should also work with timedelta values
+        import matplotlib.pyplot as plt
+
+        s = Series(timedelta_range("1 day", periods=3))
+        _, ax = plt.subplots()
+        s.plot.barh(ax=ax)
+        bars = ax.patches
+        assert len(bars) == 3
+        plt.close()

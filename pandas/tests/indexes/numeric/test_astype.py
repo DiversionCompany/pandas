@@ -110,3 +110,15 @@ class TestAstype:
         idx_float = Index([1.0, 2.0, 3.0])
         result = idx_float.astype(np.str_)
         assert result.dtype == object
+
+    def test_astype_numpy_bytes_dtype(self):
+        # GH#50127: Index.astype("S3") (numpy bytes dtype) should not raise
+        # NotImplementedError. This is the exact regression from the issue:
+        # pd.Index(['a', 'b']).astype("S3") worked in pandas 1.5 but raised
+        # NotImplementedError in pandas 2.x.
+        idx = Index(["a", "b"])
+        result = idx.astype("S3")
+        # Result dtype is object; values are bytes
+        assert result.dtype == object
+        assert result[0] == b"a"
+        assert result[1] == b"b"

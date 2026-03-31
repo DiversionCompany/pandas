@@ -336,6 +336,22 @@ class TestTimedeltas:
         rng = Timedelta(np.nan)
         assert np.isnan(rng.total_seconds())
 
+    def test_total_seconds_nanoseconds(self):
+        # GH#46819: total_seconds should include nanosecond component
+        # Pure nanosecond Timedelta
+        td = Timedelta(42, unit="ns")
+        assert td.total_seconds() == 42 / 1_000_000_000
+
+        # Timedelta with mixed components including nanoseconds
+        td = Timedelta("1 days 2 min 3 us 42 ns")
+        expt = 1 * 86400 + 2 * 60 + 3 / 1_000_000 + 42 / 1_000_000_000
+        assert abs(td.total_seconds() - expt) < 1e-15
+
+        # Verify nanoseconds are NOT lost (exact equality check)
+        td_ns = Timedelta(nanoseconds=1)
+        assert td_ns.total_seconds() == 1 / 1_000_000_000
+        assert td_ns.total_seconds() != 0.0  # was returning 0.0 before the fix
+
     def test_conversion(self):
         for td in [Timedelta(10, unit="D"), Timedelta("1 days, 10:11:12.012345")]:
             td = td.as_unit("ns")

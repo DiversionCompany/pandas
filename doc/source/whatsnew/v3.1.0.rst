@@ -171,6 +171,7 @@ Timedelta
 ^^^^^^^^^
 - Bug in :func:`to_timedelta` where passing ``np.str_`` objects would fail in Cython string parsing (:issue:`48974`)
 - Bug in :meth:`Timedelta.round`, :meth:`Timedelta.floor`, and :meth:`Timedelta.ceil` raising ``ZeroDivisionError`` when the Timedelta has seconds (or coarser) internal resolution and the target frequency is sub-second (:issue:`64828`)
+- Bug in :meth:`Timedelta.total_seconds` returning incorrect values for :class:`Timedelta` objects with a nanosecond component, as nanoseconds were not included in the calculation (:issue:`46819`)
 -
 
 Timezones

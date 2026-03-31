@@ -1365,7 +1365,8 @@ cdef class _Timedelta(timedelta):
         Total seconds in the duration.
 
         This method calculates the total duration in seconds by combining
-        the days, seconds, and microseconds of the `Timedelta` object.
+        the days, seconds, microseconds, and nanoseconds of the `Timedelta`
+        object.
 
         See Also
         --------
@@ -1373,6 +1374,7 @@ cdef class _Timedelta(timedelta):
         Timedelta : Represents a duration, the difference between two dates or times.
         Timedelta.seconds : Returns the seconds component of the timedelta.
         Timedelta.microseconds : Returns the microseconds component of the timedelta.
+        Timedelta.nanoseconds : Returns the nanoseconds component of the timedelta.
 
         Examples
         --------
@@ -1381,10 +1383,20 @@ cdef class _Timedelta(timedelta):
         Timedelta('0 days 00:01:00')
         >>> td.total_seconds()
         60.0
+
+        >>> td = pd.Timedelta('1 days 2 min 3 us 42 ns')
+        >>> td.total_seconds()
+        86520.000003042
         """
-        # We need to override bc we overrode days/seconds/microseconds
-        # TODO: add nanos/1e9?
-        return self.days * 24 * 3600 + self.seconds + self.microseconds / 1_000_000
+        # GH#46819: We need to override bc we overrode days/seconds/microseconds.
+        # Include nanoseconds component to avoid returning wrong values for
+        # Timedeltas with nanosecond precision.
+        return (
+            self.days * 24 * 3600
+            + self.seconds
+            + self.microseconds / 1_000_000
+            + self.nanoseconds / 1_000_000_000
+        )
 
     @property
     def unit(self) -> str:

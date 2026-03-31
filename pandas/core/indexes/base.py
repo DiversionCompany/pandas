@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from collections import abc
 from datetime import datetime
-from enum import Enum
+from enum import (
+    Enum,
+    EnumMeta,
+)
 import functools
 from itertools import zip_longest
 import operator
@@ -550,6 +553,12 @@ class Index(IndexOpsMixin, PandasObject):
             raise cls._raise_scalar_data_error(data)
         elif hasattr(data, "__array__"):
             return cls(np.asarray(data), dtype=dtype, copy=copy, name=name)
+        elif isinstance(data, EnumMeta):
+            # GH#54386: Enum classes (e.g. MyIntEnum) are iterable but are
+            # instances of `type`, so is_list_like() returns False for them.
+            # Convert to list of enum members so Index(MyEnum) works like
+            # Index(list(MyEnum)) and DataFrame(columns=MyEnum) is supported.
+            return cls(list(data), dtype=dtype, copy=copy, name=name)
         elif not is_list_like(data) and not isinstance(data, memoryview):
             # 2022-11-16 the memoryview check is only necessary on some CI
             #  builds, not clear why

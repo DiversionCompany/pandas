@@ -2781,19 +2781,71 @@ def test_stack_preserves_na(dtype, na_value, test_multiindex):
     tm.assert_series_equal(result, expected)
 
 
-def test_stack_nat_in_datetimeindex():
+@pytest.mark.parametrize(
+    "nat_position",
+    [
+        pytest.param("middle", id="nat-in-middle"),
+        pytest.param("first", id="nat-at-first"),
+        pytest.param("last", id="nat-at-last"),
+    ],
+)
+def test_stack_nat_in_datetimeindex(nat_position):
     # GH#57152 - df.stack() returns wrong data when NaT is in index (regression)
-    idx = pd.DatetimeIndex(["2020-01-01", pd.NaT, "2020-01-03"])
-    df = DataFrame({"A": [1, 2, 3], "B": [4, 5, 6]}, index=idx)
+    # The root cause was factorize() using use_na_sentinel=True (default), which
+    # assigned code -1 to NaT values, causing data misalignment in the result.
+    if nat_position == "middle":
+        idx = pd.DatetimeIndex(["2020-01-01", pd.NaT, "2020-01-03"])
+        values_A = [1, 2, 3]
+        values_B = [4, 5, 6]
+        expected_idx = pd.DatetimeIndex(
+            [
+                "2020-01-01",
+                "2020-01-01",
+                pd.NaT,
+                pd.NaT,
+                "2020-01-03",
+                "2020-01-03",
+            ]
+        )
+        expected_values = [1, 4, 2, 5, 3, 6]
+    elif nat_position == "first":
+        idx = pd.DatetimeIndex([pd.NaT, "2020-01-01", "2020-01-03"])
+        values_A = [1, 2, 3]
+        values_B = [4, 5, 6]
+        expected_idx = pd.DatetimeIndex(
+            [
+                pd.NaT,
+                pd.NaT,
+                "2020-01-01",
+                "2020-01-01",
+                "2020-01-03",
+                "2020-01-03",
+            ]
+        )
+        expected_values = [1, 4, 2, 5, 3, 6]
+    else:  # last
+        idx = pd.DatetimeIndex(["2020-01-01", "2020-01-03", pd.NaT])
+        values_A = [1, 2, 3]
+        values_B = [4, 5, 6]
+        expected_idx = pd.DatetimeIndex(
+            [
+                "2020-01-01",
+                "2020-01-01",
+                "2020-01-03",
+                "2020-01-03",
+                pd.NaT,
+                pd.NaT,
+            ]
+        )
+        expected_values = [1, 4, 2, 5, 3, 6]
+
+    df = DataFrame({"A": values_A, "B": values_B}, index=idx)
     result = df.stack()
 
     expected_index = MultiIndex.from_arrays(
-        [
-            pd.DatetimeIndex(["2020-01-01", "2020-01-01", pd.NaT, pd.NaT, "2020-01-03", "2020-01-03"]),
-            Index(["A", "B", "A", "B", "A", "B"]),
-        ]
+        [expected_idx, Index(["A", "B", "A", "B", "A", "B"])]
     )
-    expected = Series([1, 4, 2, 5, 3, 6], index=expected_index)
+    expected = Series(expected_values, index=expected_index)
     tm.assert_series_equal(result, expected)
 
 
@@ -2810,7 +2862,16 @@ def test_stack_nat_in_datetimeindex_multiindex():
 
     expected_index = pd.MultiIndex.from_arrays(
         [
-            pd.DatetimeIndex(["2020-01-01", "2020-01-01", pd.NaT, pd.NaT, "2020-01-03", "2020-01-03"]),
+            pd.DatetimeIndex(
+                [
+                    "2020-01-01",
+                    "2020-01-01",
+                    pd.NaT,
+                    pd.NaT,
+                    "2020-01-03",
+                    "2020-01-03",
+                ]
+            ),
             Index(["x", "x", "y", "y", "z", "z"]),
             Index(["A", "B", "A", "B", "A", "B"]),
         ]

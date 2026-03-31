@@ -352,6 +352,17 @@ class TestTimedeltas:
         assert td_ns.total_seconds() == 1 / 1_000_000_000
         assert td_ns.total_seconds() != 0.0  # was returning 0.0 before the fix
 
+        # GH#46819: exact reproduction from the issue report
+        # (signal difference in nanosecond scale should not return 0.0)
+        import numpy as np
+
+        duration, Ts = 0.5, 5e-7
+        signal = to_timedelta(np.arange(0, duration, Ts), "s")
+        dt = signal[1] - signal[0]
+        assert dt.total_seconds() == pytest.approx(5e-7, rel=1e-6), (
+            f"Expected ~5e-7, got {dt.total_seconds()}"
+        )
+
     def test_conversion(self):
         for td in [Timedelta(10, unit="D"), Timedelta("1 days, 10:11:12.012345")]:
             td = td.as_unit("ns")

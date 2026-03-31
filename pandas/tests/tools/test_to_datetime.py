@@ -563,6 +563,26 @@ class TestToDatetime:
         result3 = to_datetime(vals, format="mixed")
         tm.assert_index_equal(result3, expected)
 
+    def test_to_datetime_string_resolution_inference(self):
+        # GH#64252 - to_datetime should infer resolution from string precision;
+        # minimum resolution is us (microseconds), so second/millisecond precision
+        # strings are also returned as us
+        # Second precision -> us resolution (minimum)
+        result = to_datetime(["2020-01-01T12:00:00"])
+        assert result.dtype == "datetime64[us]"
+
+        # Millisecond precision (3 digits) -> us resolution (clamped to minimum)
+        result = to_datetime(["2020-01-01T12:00:00.123"])
+        assert result.dtype == "datetime64[us]"
+
+        # Microsecond precision (6 digits) -> us resolution
+        result = to_datetime(["2020-01-01T12:00:00.123456"])
+        assert result.dtype == "datetime64[us]"
+
+        # Nanosecond precision (9 digits) -> ns resolution
+        result = to_datetime(["2020-01-01T12:00:00.123456789"])
+        assert result.dtype == "datetime64[ns]"
+
     def test_to_datetime_none(self):
         # GH#23055
         assert to_datetime(None) is NaT

@@ -738,3 +738,32 @@ def test_timedelta_week_suffix():
 
     result = Timedelta("1W")
     assert result == expected
+
+
+def test_timedelta_seconds_microseconds_components_gh57951():
+    # GH#57951 - regression: .seconds and .microseconds properties returned
+    # incorrect values after pandas_timedelta_to_timedeltastruct refactoring
+    # (PR #55999). The fix uses precomputed struct fields instead of
+    # recomputing from component fields.
+    td = Timedelta("1 days 2 hours 3 minutes 4 seconds 5 ms 6 us 7 ns")
+    expected_seconds = 2 * 3600 + 3 * 60 + 4
+    expected_microseconds = 5 * 1000 + 6
+    assert td.seconds == expected_seconds
+    assert td.microseconds == expected_microseconds
+    assert td.nanoseconds == 7
+
+    # Also verify with non-nanosecond resolutions
+    td_ms = Timedelta(np.timedelta64(90061001, "ms"))  # 1d 1h 1m 1s + 1ms
+    assert td_ms.seconds == 3600 + 60 + 1
+    assert td_ms.microseconds == 1000
+
+    td_us = Timedelta(np.timedelta64(90061000001, "us"))  # 1d 1h 1m 1s + 1us
+    assert td_us.seconds == 3600 + 60 + 1
+    assert td_us.microseconds == 1
+
+    # Negative timedelta: verify components are consistent
+    td_neg = Timedelta("-1 days 10:11:12.100123456")
+    assert td_neg.days == -1
+    assert td_neg.seconds == 10 * 3600 + 11 * 60 + 12
+    assert td_neg.microseconds == 100 * 1000 + 123
+    assert td_neg.nanoseconds == 456

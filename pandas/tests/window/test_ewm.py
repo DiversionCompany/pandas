@@ -735,3 +735,15 @@ def test_numeric_only_corr_cov_series(kernel, use_arg, numeric_only, dtype):
         op2 = getattr(ewm2, kernel)
         expected = op2(*arg2, numeric_only=numeric_only)
         tm.assert_series_equal(result, expected)
+
+
+def test_ewm_agg_callable(frame_or_series):
+    # GH#63855: ExponentialMovingWindow.agg should accept a callable that
+    # operates on the EWM object (e.g., lambda e: e.mean())
+    obj = frame_or_series(range(5), dtype=float)
+    result = obj.ewm(alpha=0.5).agg(lambda e: e.mean())
+    expected = obj.ewm(alpha=0.5).mean()
+    if frame_or_series is DataFrame:
+        tm.assert_frame_equal(result, expected)
+    else:
+        tm.assert_series_equal(result, expected)

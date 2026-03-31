@@ -18,7 +18,10 @@ from pandas.core.dtypes.common import (
     is_numeric_dtype,
 )
 from pandas.core.dtypes.dtypes import DatetimeTZDtype
-from pandas.core.dtypes.generic import ABCSeries
+from pandas.core.dtypes.generic import (
+    ABCDataFrame,
+    ABCSeries,
+)
 from pandas.core.dtypes.missing import isna
 
 from pandas.core import common
@@ -521,7 +524,26 @@ class ExponentialMovingWindow(BaseWindow):
         1  1.666667  4.666667  7.666667
         2  2.428571  5.428571  8.428571
         """
-        return super().aggregate(func, *args, **kwargs)
+        # GH#63855: ExponentialMovingWindow does not have an `apply` method,
+        # so we cannot use BaseWindow.aggregate's callable fallback which calls
+        # `self.apply(func, ...)`. Instead, when func is a single callable
+        # (not handled by ResamplerWindowApply), call func(self) directly,
+        # which lets users pass a function that operates on the EWM object
+        # (e.g., lambda e: e.mean()).
+        from pandas.core.apply import (
+            ResamplerWindowApply,
+            reconstruct_func,
+        )
+
+        relabeling, func, columns, order = reconstruct_func(func, **kwargs)
+        result = ResamplerWindowApply(self, func, args=args, kwargs=kwargs).agg()
+        if isinstance(result, ABCDataFrame) and relabeling:
+            result = result.iloc[:, order]
+            result.columns = columns
+        if result is None:
+            # func is a single callable; call it on the EWM object directly
+            result = func(self)  # pyright: ignore[reportOptionalCall]
+        return result
 
     agg = aggregate
 

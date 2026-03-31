@@ -260,6 +260,7 @@ Plotting
 
 Groupby/resample/rolling
 ^^^^^^^^^^^^^^^^^^^^^^^^
+- Bug in :meth:`.DataFrameGroupBy.apply` where applying a lambda with positional references (e.g. ``lambda x: x["col"].values[-1]``) on an empty :class:`DataFrame` would raise an error instead of returning an empty result (:issue:`46496`)
 - Bug in :meth:`Series.resample` and :meth:`DataFrame.resample` where ``freq="D"`` with ``closed="right"`` produced different bin edges than ``freq="24h"`` with ``closed="right"`` after ``Day`` was decoupled from ``Tick`` in :issue:`61985` (:issue:`62200`)
 - Bug in :meth:`.DataFrameGroupBy.agg` when there are no groups, multiple keys, and ``group_keys=False`` (:issue:`51445`)
 - Bug in :meth:`.DataFrameGroupBy.agg` would operate on the group as a whole when ``args`` or ``kwargs`` are supplied for the provided ``func``; now this method only operates on each Series of the group (:issue:`39169`)

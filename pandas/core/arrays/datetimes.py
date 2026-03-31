@@ -549,8 +549,12 @@ class DatetimeArray(dtl.TimelikeOps, dtl.DatelikeOps):
                 i8values = i8values.astype("i8")
 
         if start == end:
-            if not left_inclusive and not right_inclusive:
-                i8values = i8values[1:-1]
+            if not left_inclusive or not right_inclusive:
+                # GH#55293: when start == end, any half-open or open interval
+                # should return empty, because the single point cannot
+                # simultaneously be included and excluded.
+                # [a, a) -> empty, (a, a] -> empty, (a, a) -> empty
+                i8values = i8values[:0]
         else:
             if not left_inclusive or not right_inclusive:
                 # GH#55293: only compare against start/end when they are not

@@ -269,3 +269,30 @@ def test_fillna_non_scalar_raises():
     msg = "can only insert Interval objects and NA into an IntervalArray"
     with pytest.raises(TypeError, match=msg):
         arr.fillna([1, 1])
+
+
+@pytest.mark.parametrize(
+    "dtype_str, expected_subtype",
+    [
+        ("float32", np.float32),
+        ("float16", np.float16),
+        ("int32", np.int32),
+        ("int16", np.int16),
+        ("uint32", np.uint32),
+    ],
+)
+def test_interval_array_non_64bit_dtype(dtype_str, expected_subtype):
+    # GH#45412 - can create IntervalDtype[float32] but not IntervalArray[float32]
+    # Passing a raw dtype string/object should be treated as the subtype for
+    # IntervalDtype rather than raising TypeError.
+    breaks = np.array([0, 1, 2, 3], dtype=expected_subtype)
+    result = IntervalArray.from_breaks(breaks, dtype=dtype_str)
+    assert result.dtype == pd.IntervalDtype(dtype_str, "right")
+    assert result.left.dtype == np.dtype(dtype_str)
+    assert result.right.dtype == np.dtype(dtype_str)
+
+    # Also test from_arrays
+    left = np.array([0, 1, 2], dtype=expected_subtype)
+    right = np.array([1, 2, 3], dtype=expected_subtype)
+    result_arrays = IntervalArray.from_arrays(left, right, dtype=dtype_str)
+    assert result_arrays.dtype == pd.IntervalDtype(dtype_str, "right")

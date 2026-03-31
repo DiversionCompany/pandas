@@ -296,13 +296,13 @@ class IntervalArray(IntervalMixin, ExtensionArray):
         if dtype is not None:
             # GH 19262: dtype must be an IntervalDtype to override inferred
             dtype = pandas_dtype(dtype)
-            if isinstance(dtype, IntervalDtype):
-                if dtype.subtype is not None:
-                    left = left.astype(dtype.subtype)
-                    right = right.astype(dtype.subtype)
-            else:
-                msg = f"dtype must be an IntervalDtype, got {dtype}"
-                raise TypeError(msg)
+            if not isinstance(dtype, IntervalDtype):
+                # GH#45412: Allow specifying the subtype directly, e.g.
+                # IntervalArray.from_breaks([0, 1, 2], dtype='float32')
+                dtype = IntervalDtype(dtype, closed)
+            if dtype.subtype is not None:
+                left = left.astype(dtype.subtype)
+                right = right.astype(dtype.subtype)
 
             if dtype.closed is None:
                 # possibly loading an old pickle

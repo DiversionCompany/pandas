@@ -550,3 +550,23 @@ def test_frame_setitem_partial_multiindex():
     expected = df.copy()
     expected["d"] = 8
     tm.assert_frame_equal(result, expected)
+
+
+def test_series_loc_setitem_multiindex_no_nan():
+    # GH#46837 - setting a slice via loc on a Series with MultiIndex should
+    # not produce NaN values when the RHS values were obtained from the same
+    # Series via loc.
+    idx = pd.MultiIndex.from_product([(0, 1), (2, 3)])
+    s = Series([True] * 4, index=idx)
+    s.loc[0, :] = s.loc[0, :]
+    expected = Series([True] * 4, index=idx)
+    tm.assert_series_equal(s, expected)
+
+
+def test_series_loc_setitem_multiindex_series_value():
+    # GH#46837 - setting a slice via loc with a Series value should work
+    idx = pd.MultiIndex.from_product([(0, 1), (2, 3)])
+    s = Series([1, 2, 3, 4], index=idx, dtype=float)
+    s.loc[0, :] = Series([10.0, 20.0], index=[2, 3])
+    expected = Series([10.0, 20.0, 3.0, 4.0], index=idx, dtype=float)
+    tm.assert_series_equal(s, expected)

@@ -557,6 +557,13 @@ class TestDataFrameDrop:
         ).set_index(idx)
         tm.assert_frame_equal(result, expected)
 
+    def test_drop_index_none_label(self):
+        # GH#63304: drop(index=None) should drop the NA/None label, not raise
+        df = DataFrame({"a": [1, 2, 3]}, index=[1, 2, None])
+        result = df.drop(index=None)
+        expected = DataFrame({"a": [1, 2]}, index=[1, 2])
+        tm.assert_frame_equal(result, expected)
+
     def test_drop_parse_strings_datetime_index(self):
         # GH #5355
         df = DataFrame(

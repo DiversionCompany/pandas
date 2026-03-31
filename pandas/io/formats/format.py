@@ -171,9 +171,11 @@ class SeriesFormatter:
         if is_truncated_vertically:
             max_rows = cast("int", max_rows)
             if min_rows:
-                # if min_rows is set (not None or 0), set max_rows to minimum
-                # of both
-                max_rows = min(min_rows, max_rows)
+                # GH#64824: if min_rows is set (not None or 0), set max_rows to
+                # min_rows. Use min_rows directly rather than min(min_rows, max_rows)
+                # so that min_rows > max_rows works correctly (showing min_rows rows
+                # in the truncated repr instead of being capped at max_rows).
+                max_rows = min_rows
             if max_rows == 1:
                 row_num = max_rows
                 series = series.iloc[:max_rows]
@@ -615,8 +617,10 @@ class DataFrameFormatter:
         """
         if max_rows:
             if (len(self.frame) > max_rows) and self.min_rows:
-                # if truncated, set max_rows showed to min_rows
-                max_rows = min(self.min_rows, max_rows)
+                # GH#64824: when truncated, set max_rows to min_rows (the number of
+                # rows to show in truncated repr). Use min_rows directly instead of
+                # min(min_rows, max_rows), so that min_rows > max_rows works correctly.
+                max_rows = self.min_rows
         return max_rows
 
     def _is_in_terminal(self) -> bool:

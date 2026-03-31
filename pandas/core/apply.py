@@ -1463,6 +1463,15 @@ class FrameColumnApply(FrameApply):
         if self.result_type == "expand":
             result = self.infer_to_same_shape(results, res_index)
 
+        # GH#35518: When the function returns a tuple without explicit
+        # result_type, expand the tuple into a DataFrame (one column per
+        # element).  This restores the pandas 1.0.x behavior where a
+        # tuple-returning function on axis=1 produced a DataFrame rather
+        # than a Series of tuples.  Users who genuinely want a Series of
+        # tuples should pass result_type="reduce".
+        elif self.result_type is None and isinstance(results[0], tuple):
+            result = self.infer_to_same_shape(results, res_index)
+
         # we have a non-series and don't want inference
         elif not isinstance(results[0], ABCSeries):
             result = self.obj._constructor_sliced(results)

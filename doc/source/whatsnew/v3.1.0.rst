@@ -213,6 +213,7 @@ Strings
 Interval
 ^^^^^^^^
 - Bug in :class:`~pandas.arrays.IntervalArray` constructors (:meth:`~pandas.arrays.IntervalArray.from_breaks`, :meth:`~pandas.arrays.IntervalArray.from_arrays`, :meth:`~pandas.arrays.IntervalArray.from_tuples`) where passing a raw dtype string or object (e.g. ``dtype='float32'``) raised ``TypeError`` instead of treating it as the ``IntervalDtype`` subtype (:issue:`45412`)
+- Bug in :meth:`IntervalDtype.__from_arrow__` where passing an :class:`IntervalDtype` with a nullable ``ExtensionDtype`` subtype (e.g. ``Int64Dtype``) raised ``TypeError: Cannot interpret 'Int64Dtype()' as a data type`` (:issue:`64297`)
 -
 
 Indexing

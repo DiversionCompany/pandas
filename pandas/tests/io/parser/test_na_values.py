@@ -860,3 +860,13 @@ def test_none_string_treated_as_na_with_explicit_na_values(all_parsers):
     result = parser.read_csv(StringIO(data), na_values=["None"])
     expected = DataFrame({"a": [np.nan]})
     tm.assert_frame_equal(result, expected)
+
+
+def test_none_string_element_access(all_parsers):
+    # GH#52493 - exact reproduction: pd.read_csv(io.StringIO("a\nNone")).a[0]
+    # should return 'None' (string), not NaN
+    parser = all_parsers
+    data = "a\nNone"
+    result = parser.read_csv(StringIO(data)).a[0]
+    assert result == "None", f"Expected 'None' string, got {result!r}"
+    assert isinstance(result, str), f"Expected str type, got {type(result)}"

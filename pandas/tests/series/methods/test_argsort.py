@@ -108,3 +108,15 @@ class TestSeriesArgsort:
 
         result_stable_false = ser.argsort(kind="mergesort", stable=False)
         tm.assert_series_equal(result_stable_false, result_mergesort)
+
+    def test_argsort_stable_true_with_ties(self):
+        # GH#64255: stable=True should preserve original order for equal elements
+        # Verify that stable sort maintains relative order of equal elements
+        ser = Series([3, 1, 2, 1, 3])
+        result = ser.argsort(stable=True)
+        # Using stable=True: among ties for value=1, index 1 should come before 3
+        # Among ties for value=3, index 0 should come before 4
+        expected = ser.argsort(kind="stable")
+        tm.assert_series_equal(result, expected)
+        # The relative order of equal elements should be preserved
+        assert list(result.values) == list(expected.values)

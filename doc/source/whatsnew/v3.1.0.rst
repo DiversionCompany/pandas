@@ -155,6 +155,7 @@ Categorical
 
 Datetimelike
 ^^^^^^^^^^^^
+- Bug in :func:`date_range` where ``inclusive='left'`` or ``inclusive='right'`` returned a non-empty result when ``start == end``, inconsistent with interval notation where ``[a, a)`` and ``(a, a]`` are empty (:issue:`55293`)
 - Bug in :class:`Timestamp` constructor where passing ``np.str_`` objects would fail in Cython string parsing (:issue:`48974`)
 - Bug in :class:`Timestamp` constructor, :class:`Timedelta` constructor, :func:`to_datetime`, and :func:`to_timedelta` with non-round ``float`` input and ``unit`` failing to raise when the value is just outside the representable bounds (:issue:`57366`)
 - Bug in :func:`to_datetime` and :func:`to_timedelta` on ARM platforms where round ``float`` values outside the int64 domain (e.g. ``float(2**63)``) could silently produce incorrect results instead of raising (:issue:`64619`)

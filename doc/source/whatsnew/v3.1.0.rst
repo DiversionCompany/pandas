@@ -139,6 +139,7 @@ Performance improvements
 - Performance improvement in :attr:`Timedelta.seconds` and :attr:`Timedelta.microseconds` by using precomputed struct fields instead of recomputing from component fields (:issue:`57951`)
 - Performance improvement in datetime/timedelta unit conversion (e.g. ``datetime64[s]`` to ``datetime64[ns]``) (:issue:`35025`)
 - Performance improvement in indexing a :class:`DataFrame` with a :class:`CategoricalIndex` of :class:`Interval` categories (:issue:`61928`)
+- Performance improvement in :func:`~pandas.tseries.frequencies.to_offset` by replacing an O(n) linear scan through deprecated-alias values with an O(1) frozenset lookup, fixing a regression introduced when enforcing deprecated frequency strings (:issue:`58962`)
 - Performance improvement in plotting :class:`DatetimeIndex` with multiplied frequencies (e.g. ``"1000ms"``, ``"100s"``) (:issue:`50355`)
 - Performance improvement in reading zip-compressed files (e.g. :func:`read_pickle`, :func:`read_csv`) on Python < 3.12 (:issue:`59279`)
 - Performance improvement in repr of :class:`Series` and :class:`DataFrame` containing third-party array-like objects (e.g. xarray ``DataArray``) in object dtype columns (:issue:`61809`)

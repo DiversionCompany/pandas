@@ -213,6 +213,7 @@ Indexing
 ^^^^^^^^
 - Bugs in setitem-with-expansion when adding new rows failing to keep the original dtype in some cases (:issue:`32346`, :issue:`15231`, :issue:`47503`, :issue:`6485`, :issue:`25383`, :issue:`52235`, :issue:`17026`, :issue:`56010`)
 - Bug in :meth:`Index.get_loc` where :class:`~enum.Enum` members (and subclasses such as :class:`~enum.IntEnum`) could not be used as column labels when the index contained the enum's value (:issue:`54386`)
+- Bug in :class:`Index` constructor and :func:`DataFrame` where passing an :class:`~enum.Enum` subclass (e.g. ``DataFrame(columns=MyEnum)``) raised ``TypeError`` instead of using the enum members as column values (:issue:`54386`)
 - Bug in :meth:`Index.get_level_values` mishandling boolean, NA-like (``np.nan``, ``pd.NA``, ``pd.NaT``) and integer index names (:issue:`62169`)
 - Bug in :meth:`MultiIndex.loc` returning incorrect results when indexing with :class:`numpy.datetime64` on a level containing :class:`datetime.date` objects (:issue:`55969`)
 - Bug in :meth:`Series.__getitem__` and :meth:`Series.loc.__getitem__` where using :class:`numpy.floating` scalars (e.g. ``np.float64(0.1)``) as index labels on a float-valued :class:`Index` could raise or return incorrect results (:issue:`57645`)

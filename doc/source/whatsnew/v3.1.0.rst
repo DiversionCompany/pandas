@@ -189,6 +189,7 @@ Numeric
 - Fixed regression where calling ``np.maximum(series, ...)`` or other numpy ufuncs not dispatched via dunder methods could cause a segfault due to unsafe ``PyArray_DIMS`` access in :class:`NDArrayBacked` when backing a 0-dimensional array (:issue:`60611`)
 - Fixed regression where calling numpy ufuncs with a ``where`` keyword argument containing a pandas :class:`Series` (e.g. ``np.maximum(series, 0, where=series > 2)``) caused infinite recursion and a segfault (:issue:`60611`)
 - Fixed regression where :func:`numpy.logical_or`, :func:`numpy.logical_and`, :func:`numpy.logical_xor`, and :func:`numpy.logical_not` on :class:`Series` would behave erratically (e.g. not preserving nullable boolean dtype, not aligning indexes) by dispatching through pandas' dunder method path (:issue:`54416`)
+- Bug in ``mask_missing`` that raised ``AttributeError: 'bool' object has no attribute 'to_numpy'`` when called with a 0-dimensional NumPy array (:issue:`47101`)
 
 Conversion
 ^^^^^^^^^^

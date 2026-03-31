@@ -1111,14 +1111,25 @@ class TestBusinessDateRange:
         assert dr[0] == firstDate
         assert dr[-1] == end
 
-    def test_end_not_on_offset_periods(self):
+    @pytest.mark.parametrize(
+        "end,periods,expected_last",
+        [
+            # GH#64834: end on a Sunday
+            ("20260329", 5, Timestamp("2026-03-27")),
+            # GH#64834: end on a Saturday
+            ("20260321", 3, Timestamp("2026-03-20")),
+            # GH#64834: end on a Sunday (original issue example)
+            ("20260322", 3, Timestamp("2026-03-20")),
+            # End on a weekday (should work as before)
+            ("20260320", 3, Timestamp("2026-03-20")),
+        ],
+    )
+    def test_end_not_on_offset_periods(self, end, periods, expected_last):
         # GH#64834: bdate_range should return exactly `periods` business days
         # when `end` falls on a non-business day (e.g. a weekend).
-        # 2026-03-29 is a Sunday.
-        dr = bdate_range(end="20260329", periods=5)
-        assert len(dr) == 5
-        # Last business day on or before the Sunday end is Friday 2026-03-27
-        assert dr[-1] == Timestamp("2026-03-27")
+        dr = bdate_range(end=end, periods=periods)
+        assert len(dr) == periods
+        assert dr[-1] == expected_last
 
     def test_date_parse_failure(self):
         badly_formed_date = "2007/100/1"

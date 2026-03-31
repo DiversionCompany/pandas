@@ -626,6 +626,36 @@ def test_dtypes_with_usecols(all_parsers):
     tm.assert_frame_equal(result, expected)
 
 
+@pytest.mark.usefixtures("pyarrow_xfail")
+def test_nullable_int_dtype_out_of_range(all_parsers):
+    # GH#55232: read_csv should raise an error (not silently overflow) when
+    # a value is out of range for the specified nullable integer dtype
+    parser = all_parsers
+    # INT64_MAX + 1 is out of range for Int64 but valid for UInt64
+    data = "col\n9223372036854775808\n1\n"
+    with pytest.raises(TypeError, match="cannot safely cast non-equivalent"):
+        parser.read_csv(StringIO(data), dtype="Int64")
+
+
+@pytest.mark.usefixtures("pyarrow_xfail")
+def test_nullable_int_dtype_valid_boundary(all_parsers):
+    # GH#55232: values at exactly INT64_MAX should work correctly with Int64 dtype
+    parser = all_parsers
+    data = "col\n9223372036854775807\n1\n"
+    result = parser.read_csv(StringIO(data), dtype="Int64")
+    expected = DataFrame({"col": pd.array([9223372036854775807, 1], dtype="Int64")})
+    tm.assert_frame_equal(result, expected)
+
+
+@pytest.mark.usefixtures("pyarrow_xfail")
+def test_nullable_uint_int_dtype_out_of_range(all_parsers):
+    # GH#55232: values too large for UInt8 should raise
+    parser = all_parsers
+    data = "col\n256\n1\n"  # UINT8_MAX + 1
+    with pytest.raises(TypeError, match="cannot safely cast non-equivalent"):
+        parser.read_csv(StringIO(data), dtype="UInt8")
+
+
 def test_index_col_with_dtype_no_rangeindex(all_parsers):
     data = StringIO("345.5,519.5,0\n519.5,726.5,1")
     result = all_parsers.read_csv(

@@ -271,3 +271,20 @@ def test_integer_array_from_boolean():
     expected = pd.array(np.array([True, False]), dtype="Int64")
     result = pd.array(np.array([True, False], dtype=object), dtype="Int64")
     tm.assert_extension_array_equal(result, expected)
+
+
+def test_from_sequence_of_strings_overflow():
+    # GH#55232: _from_sequence_of_strings should raise TypeError when value
+    # is out of range for the specified integer dtype (not silently overflow)
+    INT64_MAX_PLUS_1 = "9223372036854775808"  # INT64_MAX + 1 = 2^63
+    with pytest.raises(TypeError, match="cannot safely cast non-equivalent"):
+        IntegerArray._from_sequence_of_strings(
+            [INT64_MAX_PLUS_1], dtype=Int64Dtype()
+        )
+
+
+def test_from_sequence_of_strings_valid_boundary():
+    # GH#55232: values at exactly INT64_MAX should work correctly
+    INT64_MAX = "9223372036854775807"
+    result = IntegerArray._from_sequence_of_strings([INT64_MAX], dtype=Int64Dtype())
+    assert result[0] == np.iinfo(np.int64).max

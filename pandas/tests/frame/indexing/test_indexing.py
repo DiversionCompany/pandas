@@ -1943,3 +1943,39 @@ class TestSetitemValidation:
     def test_setitem_validation_scalar_float(self, invalid, float_numpy_dtype, indexer):
         df = DataFrame({"a": [1, 2, None]}, dtype=float_numpy_dtype)
         self._check_setitem_invalid(df, invalid, indexer)
+
+
+def test_getitem_enum_column():
+    # GH#54386: Enum (and subclasses) should be acceptable as column keys
+    # when the column index contains the enum's value
+    from enum import Enum, IntEnum
+
+    class Col(Enum):
+        A = "a"
+        B = "b"
+
+    class IntCol(IntEnum):
+        X = 0
+        Y = 1
+
+    # Accessing with plain Enum where column index contains the value
+    df = DataFrame({"a": [1, 2], "b": [3, 4]})
+    result = df[Col.A]
+    expected = df["a"]
+    tm.assert_series_equal(result, expected)
+
+    result = df[Col.B]
+    expected = df["b"]
+    tm.assert_series_equal(result, expected)
+
+    # Accessing with IntEnum where column index contains the integer value
+    df2 = DataFrame({0: [10, 20], 1: [30, 40]})
+    result = df2[IntCol.X]
+    expected = df2[0]
+    tm.assert_series_equal(result, expected)
+
+    # DataFrame created with Enum keys should be accessible with those Enums
+    df3 = DataFrame({Col.A: [1, 2], Col.B: [3, 4]})
+    result = df3[Col.A]
+    expected = Series([1, 2], name=Col.A)
+    tm.assert_series_equal(result, expected)

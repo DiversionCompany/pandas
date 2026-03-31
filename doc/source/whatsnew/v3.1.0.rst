@@ -303,6 +303,7 @@ Reshaping
 Sparse
 ^^^^^^
 - Bug in indexing a :class:`SparseArray` with an out-of-bounds integer with the value of the length of the array returning the fill value instead of raising an ``IndexError`` (:issue:`64183`).
+- Bug in :meth:`DataFrame.reindex` where adding new columns to a sparse :class:`DataFrame` (backed by :class:`SparseDtype`) lost the sparse dtype and returned dense columns instead (:issue:`26123`).
 -
 
 ExtensionArray

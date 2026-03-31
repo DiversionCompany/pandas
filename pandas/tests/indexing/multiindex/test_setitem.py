@@ -570,3 +570,13 @@ def test_series_loc_setitem_multiindex_series_value():
     s.loc[0, :] = Series([10.0, 20.0], index=[2, 3])
     expected = Series([10.0, 20.0, 3.0, 4.0], index=idx, dtype=float)
     tm.assert_series_equal(s, expected)
+
+
+def test_series_loc_setitem_multiindex_integer_dtype():
+    # GH#46837 - setting a slice via loc on integer dtype Series with MultiIndex
+    # should not produce NaN values (which would require a dtype change).
+    idx = pd.MultiIndex.from_product([("a", "b"), (1, 2)])
+    s = Series([10, 20, 30, 40], index=idx)
+    s.loc["a", :] = s.loc["a", :]
+    expected = Series([10, 20, 30, 40], index=idx)
+    tm.assert_series_equal(s, expected)

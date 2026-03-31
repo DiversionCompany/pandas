@@ -227,6 +227,7 @@ Indexing
 - Bug in :meth:`Index.get_loc` where :class:`~enum.Enum` members (and subclasses such as :class:`~enum.IntEnum`) could not be used as column labels when the index contained the enum's value (:issue:`54386`)
 - Bug in :class:`Index` constructor and :func:`DataFrame` where passing an :class:`~enum.Enum` subclass (e.g. ``DataFrame(columns=MyEnum)``) raised ``TypeError`` instead of using the enum members as column values (:issue:`54386`)
 - Bug in :meth:`Index.get_level_values` mishandling boolean, NA-like (``np.nan``, ``pd.NA``, ``pd.NaT``) and integer index names (:issue:`62169`)
+- Bug in :meth:`MultiIndex.map` raising ``ValueError: Length of names must match number of levels in MultiIndex`` when the mapper returns tuples of a different length than the number of levels (:issue:`24800`)
 - Bug in :meth:`MultiIndex.loc` returning incorrect results when indexing with :class:`numpy.datetime64` on a level containing :class:`datetime.date` objects (:issue:`55969`)
 - Bug in :meth:`Series.__getitem__` and :meth:`Series.loc.__getitem__` where using :class:`numpy.floating` scalars (e.g. ``np.float64(0.1)``) as index labels on a float-valued :class:`Index` could raise or return incorrect results (:issue:`57645`)
 - Bug in :meth:`DataFrame.set_index` and :class:`Index` constructor where using a :class:`numpy.ndarray` with a fixed-length byte string dtype (e.g. ``|S6``) raised ``NotImplementedError`` (:issue:`57645`)

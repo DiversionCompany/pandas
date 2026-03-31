@@ -1379,6 +1379,36 @@ class TestParquetFastParquet(Base):
         expected = df.copy()
         check_round_trip(df, temp_file, fp, expected=expected)
 
+    def test_bytesio_index_preservation(self, fp):
+        # GH#64007 - fastparquet should correctly deserialise the index when
+        # multiple DataFrames are written to separate io.BytesIO streams.
+        # Verify that reading stream_1 returns df1's index values, not df2's.
+        import io
+
+        df1 = pd.DataFrame(
+            {"A": [1, 2, 3], "B": [4, 5, 6]},
+            index=pd.Index([1, 2, 3], name="idx"),
+        )
+        df2 = pd.DataFrame(
+            {"A": [7, 8, 9], "B": [10, 11, 12]},
+            index=pd.Index([4, 5, 6], name="idx"),
+        )
+
+        buf1 = io.BytesIO()
+        buf2 = io.BytesIO()
+
+        df1.to_parquet(buf1, engine=fp)
+        df2.to_parquet(buf2, engine=fp)
+
+        buf1.seek(0)
+        buf2.seek(0)
+
+        result1 = pd.read_parquet(buf1, engine=fp)
+        result2 = pd.read_parquet(buf2, engine=fp)
+
+        tm.assert_index_equal(result1.index, df1.index)
+        tm.assert_index_equal(result2.index, df2.index)
+
     def test_timezone_aware_index(
         self, fp, timezone_aware_date_list, request, temp_file
     ):

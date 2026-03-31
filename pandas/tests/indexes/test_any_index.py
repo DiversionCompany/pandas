@@ -182,3 +182,28 @@ class TestReductions:
             index.min(axis=-2)
         with pytest.raises(ValueError, match=msg):
             index.max(axis=-3)
+
+
+class TestBigEndian:
+    @pytest.mark.parametrize(
+        "dtype",
+        [
+            ">f4",
+            ">f8",
+            ">i4",
+            ">i8",
+            ">u4",
+            ">u8",
+        ],
+    )
+    def test_index_big_endian_array(self, dtype):
+        # GH#53234 - big-endian arrays should not raise ValueError when
+        # accessed via Index properties like is_unique, get_indexer, etc.
+        from pandas import Index
+
+        arr = np.array([1, 2, 3, 4, 5], dtype=dtype)
+        idx = Index(arr)
+        # These should not raise "Big-endian buffer not supported on
+        # little-endian compiler"
+        assert idx.is_unique is True
+        assert len(idx.get_indexer([1, 3])) == 2

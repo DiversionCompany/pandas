@@ -5310,6 +5310,11 @@ class Index(IndexOpsMixin, PandasObject):
         ):
             # TODO(ExtensionIndex): remove special-case, just use self._values
             return self._values.astype(object)
+        # GH#53234: convert non-native byte order arrays to native byte order so
+        # that the IndexEngine (e.g. PyObjectHashTable) can handle them without
+        # raising "Big-endian buffer not supported on little-endian compiler".
+        if isinstance(vals, np.ndarray) and not vals.dtype.isnative:
+            vals = vals.astype(vals.dtype.newbyteorder("="), copy=False)
         return vals
 
     @final

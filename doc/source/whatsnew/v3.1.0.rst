@@ -277,6 +277,7 @@ Groupby/resample/rolling
 Reshaping
 ^^^^^^^^^
 - Bug in :meth:`DataFrame.stack` returning incorrect data when the index contained ``NaT`` values (:issue:`57152`)
+- Bug in :func:`concat` where concatenating :class:`Series` with overlapping :class:`Interval` values as ``keys`` raised ``InvalidIndexError`` (:issue:`64825`)
 - Bug in :func:`merge` where merging on a :class:`MultiIndex` containing ``NaN`` values mapped ``NaN`` keys to the last level value instead of ``NaN`` (:issue:`64492`)
 - In :func:`pivot_table`, when ``values`` is empty, the aggregation will be computed on a Series of all NA values (:issue:`46475`)
 -

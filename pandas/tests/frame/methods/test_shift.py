@@ -7,6 +7,7 @@ import pandas as pd
 from pandas import (
     CategoricalIndex,
     DataFrame,
+    DatetimeIndex,
     Index,
     NaT,
     Series,
@@ -810,6 +811,22 @@ class TestDataFrameShift:
         # Also test with freq specified directly for comparison
         result2 = df.shift(1, freq="D")
         tm.assert_frame_equal(result2, expected)
+
+    def test_shift_freq_infer_with_inferred_freq(self):
+        # GH#40799: shift(freq='infer') should work when index.freq is None
+        # but index.inferred_freq is not None (DatetimeIndex without explicit freq).
+        # This is the common case when reading from CSV and using to_datetime().
+        dates = DatetimeIndex(
+            ["2020-01-01", "2020-01-02", "2020-01-03"], dtype="datetime64[ns]"
+        )
+        # Verify setup: no explicit freq, but inferred_freq is not None
+        assert dates.freq is None
+        assert dates.inferred_freq is not None
+
+        df = DataFrame({"a": [1, 2, 3]}, index=dates)
+        result = df.shift(1, freq="infer")
+        expected = df.shift(1, freq=dates.inferred_freq)
+        tm.assert_frame_equal(result, expected)
 
     def test_series_shift_interval_preserves_closed(self):
         # GH#60389

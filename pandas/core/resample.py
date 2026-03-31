@@ -42,6 +42,7 @@ from pandas.core.dtypes.generic import (
 )
 
 import pandas.core.algorithms as algos
+import pandas.core.common as com
 from pandas.core.apply import ResamplerWindowApply
 from pandas.core.base import (
     PandasObject,
@@ -2046,7 +2047,13 @@ class _GroupByMixin(PandasObject, SelectionMixin):
 
             return x.apply(f, *args, **kwargs)
 
-        result = self._groupby.apply(func)
+        # GH#52397: The underlying groupby may have as_index=False (from the
+        # outer groupby call), but the resample applies its own output structure
+        # on top. We must use as_index=True so that group keys end up in the
+        # index (MultiIndex) rather than as columns; the resample wrapper then
+        # returns a properly structured result.
+        with com.temp_setattr(self._groupby, "as_index", True):
+            result = self._groupby.apply(func)
 
         # GH 47705
         if (

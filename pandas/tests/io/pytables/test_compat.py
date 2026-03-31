@@ -101,7 +101,16 @@ def _collect_legacy_hdf_files(config=None):
 def pytest_generate_tests(metafunc):
     if "legacy_file" in metafunc.fixturenames:
         legacy_files = _collect_legacy_hdf_files(metafunc.config)
-        metafunc.parametrize("legacy_file", legacy_files, ids=lambda x: x.name)
+        if not legacy_files:
+            # GH#64604: skip gracefully when no legacy .h5 files are found,
+            # e.g. when running tests against an installed wheel where the
+            # legacy data files are not included.
+            metafunc.parametrize(
+                "legacy_file",
+                [pytest.param(None, marks=pytest.mark.skip(reason="no legacy .h5 files found"))],
+            )
+        else:
+            metafunc.parametrize("legacy_file", legacy_files, ids=lambda x: x.name)
 
 
 def test_legacy_files(datapath, legacy_file, using_infer_string, request):

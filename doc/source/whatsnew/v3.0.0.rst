@@ -1518,6 +1518,7 @@ Other
 - Bug in :meth:`Series.map` with a ``timestamp[pyarrow]`` dtype or ``duration[pyarrow]`` dtype incorrectly returning all-``NaN`` entries (:issue:`61231`)
 - Bug in :meth:`Series.mode` where an exception was raised when taking the mode with nullable types with no null values in the series. (:issue:`58926`)
 - Bug in :meth:`Series.rank` that doesn't preserve missing values for nullable integers when ``na_option='keep'``. (:issue:`56976`)
+- Bug in ``test_legacy_files`` that raised ``Empty parameter set`` instead of skipping when legacy HDF5 files are not present (e.g. when running tests against an installed wheel without legacy data files) (:issue:`64604`)
 - Bug in :meth:`Series.replace` and :meth:`DataFrame.replace` throwing ``ValueError`` when ``regex=True`` and all NA values. (:issue:`60688`)
 - Bug in :meth:`Series.replace` when the Series was created from an :class:`Index` and Copy-On-Write is enabled (:issue:`61622`)
 - Bug in :meth:`Series.to_string` when series contains complex floats with exponents (:issue:`60405`)

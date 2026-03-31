@@ -189,3 +189,24 @@ class TestSeriesClip:
             pd_result = np.clip(ser, a_min, a_max)
             np_result = Series(np.clip(ser.values, a_min, a_max))
             tm.assert_series_equal(pd_result, np_result)
+
+    def test_np_clip_small_float_a_min_with_int_series(self):
+        # GH#25066 - original issue: np.clip on integer Series with small
+        # float a_min (1e-8) should return float64 dtype, not keep int64
+        ser = Series([0, 1, 0, 1])  # int64 Series
+
+        # With 1e-7, numpy clips correctly (worked before regression)
+        result_7 = np.clip(ser, 1e-7, 1)
+        assert result_7.dtype == np.float64
+
+        # With 1e-8, should also work and return float64
+        result_8 = np.clip(ser, 1e-8, 1)
+        assert result_8.dtype == np.float64
+        expected = Series([1e-8, 1.0, 1e-8, 1.0])
+        tm.assert_series_equal(result_8, expected)
+
+        # Very small values should work too
+        for a_min in [1e-7, 1e-8, 1e-15, 1e-300]:
+            result = np.clip(ser, a_min, 1)
+            assert result.dtype == np.float64
+            assert all(result[ser == 0] == a_min)

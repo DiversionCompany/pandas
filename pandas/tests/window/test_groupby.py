@@ -1387,3 +1387,33 @@ def test_rolling_corr_with_tuples_in_index():
         {"a": [np.nan, np.nan, np.nan], "b": [np.nan, 1.0, 1.0]}, index=index
     )
     tm.assert_frame_equal(result, expected)
+
+
+def test_groupby_rolling_on_dataframe_index_consistent_with_series():
+    # GH#43405 - groupby().rolling(on=col) should produce the same MultiIndex
+    # level 2 (the "on" column values) for both DataFrame and Series results.
+    df = DataFrame(
+        {
+            "group": ["A", "A", "A", "B", "B", "B"],
+            "date": date_range("2021-01-01", periods=6),
+            "value": range(6),
+        }
+    )
+
+    # Series result via column selection
+    result_series = df.groupby("group").rolling("2D", on="date")["value"].sum()
+
+    # DataFrame result (all columns)
+    result_df = df.groupby("group").rolling("2D", on="date").sum()
+
+    # Both should have the same MultiIndex structure:
+    # level 0 = group labels, level 1 = "date" column values
+    expected_index = MultiIndex.from_arrays(
+        [
+            ["A", "A", "A", "B", "B", "B"],
+            date_range("2021-01-01", periods=6),
+        ],
+        names=["group", "date"],
+    )
+    tm.assert_index_equal(result_series.index, expected_index)
+    tm.assert_index_equal(result_df.index, expected_index)

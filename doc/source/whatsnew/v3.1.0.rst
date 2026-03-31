@@ -135,6 +135,7 @@ Performance improvements
 - Performance improvement in :meth:`GroupBy.quantile` (:issue:`64330`)
 - Performance improvement in :meth:`Index.get_indexer` for large monotonic indexes, which now uses binary search instead of building a hash table when the number of targets is small (:issue:`14273`)
 - Performance improvement in :meth:`arrays.SparseArray.isna` by avoiding a dense-then-resparsify round-trip (:issue:`41023`)
+- Performance improvement in :attr:`Timedelta.seconds` and :attr:`Timedelta.microseconds` by using precomputed struct fields instead of recomputing from component fields (:issue:`57951`)
 - Performance improvement in datetime/timedelta unit conversion (e.g. ``datetime64[s]`` to ``datetime64[ns]``) (:issue:`35025`)
 - Performance improvement in indexing a :class:`DataFrame` with a :class:`CategoricalIndex` of :class:`Interval` categories (:issue:`61928`)
 - Performance improvement in plotting :class:`DatetimeIndex` with multiplied frequencies (e.g. ``"1000ms"``, ``"100s"``) (:issue:`50355`)

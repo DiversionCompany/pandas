@@ -2398,3 +2398,20 @@ def test_large_number():
     )
     expected = Series([9999999999999999])
     tm.assert_series_equal(result, expected)
+
+
+@pytest.mark.parametrize(
+    "null_value",
+    [
+        np.nan,
+        None,
+        pd.NA,
+    ],
+    ids=["np.nan", "None", "pd.NA"],
+)
+def test_to_json_null_index(null_value):
+    # GH#31801 - null-like values in index should serialize as JSON null
+    # not as their string representation ("nan", "None", "<NA>")
+    ser = Series([1], index=[null_value])
+    result = ser.to_json()
+    assert result == '{"null":1}'

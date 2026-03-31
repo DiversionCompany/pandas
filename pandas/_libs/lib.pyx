@@ -622,7 +622,22 @@ def array_equivalent_object(ndarray left, ndarray right) -> bool:
                         return False
 
             elif PyArray_Check(x) or PyArray_Check(y):
-                return False
+                # GH#63904: one side is a numpy array and the other is not
+                # (e.g. list vs ndarray). Convert both to arrays and compare
+                # values, avoiding the numpy deprecation warning for empty
+                # array comparisons that was the original motivation for this
+                # branch (see GH#59778).
+                try:
+                    x_arr = np.asarray(x)
+                    y_arr = np.asarray(y)
+                except (ValueError, TypeError):
+                    return False
+                if x_arr.shape != y_arr.shape:
+                    return False
+                from pandas.core.dtypes.missing import array_equivalent
+
+                if not array_equivalent(x_arr, y_arr):
+                    return False
             elif (x is C_NA) ^ (y is C_NA):
                 return False
             elif not (

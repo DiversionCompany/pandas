@@ -1568,3 +1568,31 @@ class TestDataFrameReplaceRegex:
             assert len(df._mgr.blocks) == 2
         else:
             assert len(df._mgr.blocks) == 1
+
+
+def test_mask_missing_zero_d_array_gh47101():
+    # GH#47101: mask_missing raised AttributeError: 'bool' object has no
+    # attribute 'to_numpy' when arr is a 0-D numpy array, because arr == value
+    # returns a numpy scalar instead of an ndarray.
+    from pandas.core.missing import mask_missing
+
+    arr_bool = np.array(True)
+    result = mask_missing(arr_bool, True)
+    assert isinstance(result, np.ndarray)
+    assert result.shape == ()
+    assert bool(result) is True
+
+    result2 = mask_missing(arr_bool, False)
+    assert isinstance(result2, np.ndarray)
+    assert result2.shape == ()
+    assert bool(result2) is False
+
+    # Also verify with integer 0-D array
+    arr_int = np.array(5)
+    result3 = mask_missing(arr_int, 5)
+    assert isinstance(result3, np.ndarray)
+    assert bool(result3) is True
+
+    result4 = mask_missing(arr_int, 3)
+    assert isinstance(result4, np.ndarray)
+    assert bool(result4) is False

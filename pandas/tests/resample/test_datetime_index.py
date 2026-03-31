@@ -2216,3 +2216,32 @@ def test_resample_day_closed_right_matches_24h():
     right = s.resample("24h", label="right", closed="right").count()
 
     tm.assert_series_equal(left, right, check_freq=False)
+
+
+def test_resample_dataframe_day_closed_right_matches_24h():
+    # GH#62200 - DataFrame.resample("D", closed="right") should also produce
+    # the same results as DataFrame.resample("24h", closed="right") after Day
+    # was decoupled from Tick in GH#61985.
+    index = date_range("2000-01-01", "2000-02-15", freq="h")
+    df = DataFrame(
+        {"a": range(len(index)), "b": range(len(index), 2 * len(index))},
+        index=index,
+    )
+    left = df.resample("D", label="right", closed="right").sum()
+    right = df.resample("24h", label="right", closed="right").sum()
+
+    tm.assert_frame_equal(left, right, check_freq=False)
+
+
+def test_resample_day_closed_right_label_values():
+    # GH#62200 - verify that bin labels with label="right" and closed="right"
+    # for freq="D" correctly mark the right edge of each interval.
+    index = date_range("2000-01-01", periods=49, freq="h")  # 2 full days + 1h
+    s = Series(1, index=index)
+    result = s.resample("D", label="right", closed="right").sum()
+    # With closed="right" and label="right", each bin (0h, 24h] is labeled
+    # at the right edge (24h mark = next day midnight).
+    # Bin 1: (2000-01-01 00:00, 2000-01-02 00:00] -> labeled 2000-01-02
+    # Bin 2: (2000-01-02 00:00, 2000-01-03 00:00] -> labeled 2000-01-03
+    assert result.index[0] == Timestamp("2000-01-02")
+    assert result.index[1] == Timestamp("2000-01-03")

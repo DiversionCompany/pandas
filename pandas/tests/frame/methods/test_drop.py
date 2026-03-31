@@ -557,6 +557,24 @@ class TestDataFrameDrop:
         ).set_index(idx)
         tm.assert_frame_equal(result, expected)
 
+    def test_drop_index_arrow_binary_dtype_na(self):
+        # GH#63304 - binary[pyarrow] index with pd.NA should not raise ArrowInvalid
+        pytest.importorskip("pyarrow")
+        df = DataFrame(
+            index=pd.Index(
+                [None, b"\xe3", b"\xe3"],
+                dtype="binary[pyarrow]",
+                name="bytes_col",
+            )
+        )
+        result = df.drop(index=[pd.NA])
+        expected = DataFrame(
+            index=pd.Index(
+                [b"\xe3", b"\xe3"], dtype="binary[pyarrow]", name="bytes_col"
+            )
+        )
+        tm.assert_frame_equal(result, expected)
+
     def test_drop_index_none_label(self):
         # GH#63304: drop(index=None) should drop the NA/None label, not raise
         df = DataFrame({"a": [1, 2, 3]}, index=[1, 2, None])

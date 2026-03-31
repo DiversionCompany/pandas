@@ -1750,6 +1750,18 @@ class TestTSPlot:
         data.plot(ax=ax)
         mpl.pyplot.close()
 
+    def test_backwards_time_index_series_plot(self):
+        # GH#64819 - Series with backwards (descending) time index
+        # should also be plottable without raising ValueError
+        import pandas as pd
+
+        dates = pd.date_range("2026-03-24", periods=3, freq="-1D")
+        ser = pd.Series([0.5, 1.0, 2.0], index=dates)
+        _, ax = mpl.pyplot.subplots()
+        # Should not raise ValueError: Frequency must be positive
+        ser.plot(ax=ax)
+        mpl.pyplot.close()
+
 
 def _check_plot_works(f, freq=None, series=None, *args, **kwargs):
     fig = plt.gcf()

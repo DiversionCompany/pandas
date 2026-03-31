@@ -1634,3 +1634,16 @@ def test_query_local_variable_is_python_builtin(builtin_name):
     result = df.query(f"a == @{builtin_name}", parser="pandas")
     expected = df[df["a"] == builtin_val]
     tm.assert_frame_equal(result, expected)
+
+
+def test_query_local_variable_named_type():
+    # GH#48694 - the original issue report: using a variable named 'type'
+    # in query with @ syntax should not raise UndefinedVariableError.
+    # This covers the exact code pattern from the issue.
+    df = DataFrame({"name": ["Alice", "Bob"], "type": ["A", "B"]})
+    # type as a local variable (shadows Python builtin 'type')
+    type_val = "A"
+    # Query with @type should work without raising UndefinedVariableError
+    result = df.query("type == @type_val")
+    expected = df[df["type"] == "A"]
+    tm.assert_frame_equal(result, expected)

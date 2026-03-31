@@ -1954,6 +1954,34 @@ def test_str_replace_negative_n():
     tm.assert_series_equal(expected3, actual3)
 
 
+def test_str_replace_backreference_arrow_dtype():
+    # GH#64872 - backreferences should fall back to Python re for ArrowDtype
+    ser = pd.Series(["foo bar", "hello world", None], dtype=ArrowDtype(pa.string()))
+    # backreference \1 swaps the two words
+    result = ser.str.replace(r"(\w+) (\w+)", r"\2 \1", regex=True)
+    expected = pd.Series(["bar foo", "world hello", None], dtype=ArrowDtype(pa.string()))
+    tm.assert_series_equal(result, expected)
+
+
+def test_str_replace_consistency_arrow_vs_python():
+    # GH#64872 - ArrowDtype and python string dtype should produce identical results
+    # for str.replace with various options
+    data = ["abc", "ABC", "123", None]
+    arrow_ser = pd.Series(data, dtype=ArrowDtype(pa.string()))
+    python_ser = pd.Series(data, dtype="object")
+
+    # Test case=False
+    result_arrow = arrow_ser.str.replace("b", "x", case=False, regex=False)
+    result_python = python_ser.str.replace("b", "x", case=False, regex=False)
+    tm.assert_series_equal(result_arrow, result_python.astype(ArrowDtype(pa.string())))
+
+    # Test compiled regex
+    pat = re.compile(r"[a-z]+")
+    result_arrow = arrow_ser.str.replace(pat, "X", regex=True)
+    result_python = python_ser.str.replace(pat, "X", regex=True)
+    tm.assert_series_equal(result_arrow, result_python.astype(ArrowDtype(pa.string())))
+
+
 def test_str_repeat_unsupported():
     ser = pd.Series(["abc", None], dtype=ArrowDtype(pa.string()))
     with pytest.raises(NotImplementedError, match="repeat is not"):

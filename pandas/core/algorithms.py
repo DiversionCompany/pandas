@@ -58,6 +58,7 @@ from pandas.core.dtypes.dtypes import (
     NumpyEADtype,
 )
 from pandas.core.dtypes.generic import (
+    ABCDataFrame,
     ABCDatetimeArray,
     ABCExtensionArray,
     ABCIndex,
@@ -1667,6 +1668,17 @@ def map_array(
     if na_action not in (None, "ignore"):
         msg = f"na_action must either be 'ignore' or None, {na_action} was passed"
         raise ValueError(msg)
+
+    # GH#24800: reject DataFrame mappers early with a clear error message.
+    # DataFrame is dict-like (is_dict_like returns True) so without this
+    # check it falls into the Series(mapper) path below, which raises a
+    # confusing "Data must be 1-dimensional" ValueError.
+    if isinstance(mapper, ABCDataFrame):
+        raise ValueError(
+            "Mapper must be a 1-dimensional array-like, dict, Series, or callable; "
+            "a DataFrame is not allowed.  "
+            "Use mapper[column] to select a single column as the mapping."
+        )
 
     # we can fastpath dict/Series to an efficient map
     # as we know that we are not going to have to yield

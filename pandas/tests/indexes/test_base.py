@@ -640,6 +640,20 @@ class TestIndex:
         expected = Index(["stuff", "blank", "blank"])
         tm.assert_index_equal(result, expected)
 
+    def test_map_dataframe_raises(self):
+        # GH#24800 - passing a DataFrame as mapper should raise a clear ValueError
+        # (not the confusing "Data must be 1-dimensional" from the Series constructor)
+        index = Index([1, 2, 3])
+        df_mapper = DataFrame({"a": [10, 20, 30]}, index=[1, 2, 3])
+        msg = "Mapper must be a 1-dimensional array-like"
+        with pytest.raises(ValueError, match=msg):
+            index.map(df_mapper)
+
+        # Multi-column DataFrame should also raise
+        df_multi = DataFrame({"a": [10, 20], "b": [30, 40]}, index=[1, 2])
+        with pytest.raises(ValueError, match=msg):
+            index.map(df_multi)
+
     @pytest.mark.parametrize("name,expected", [("foo", "foo"), ("bar", None)])
     def test_append_empty_preserve_name(self, name, expected):
         left = Index([], name="foo")

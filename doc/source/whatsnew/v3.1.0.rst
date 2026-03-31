@@ -186,6 +186,7 @@ Numeric
 ^^^^^^^
 - Fixed bug in :func:`read_excel` where having a column with mixture of numeric and boolean values will typecast the values based on the first appearance data type since 1==True and 0==False (:issue:`60088`)
 - Fixed bug in :meth:`Series.clip` where passing a scalar numpy array (e.g. ``np.array(0)``) would raise a ``TypeError`` (:issue:`59053`)
+- Fixed regression introduced in pandas 0.24 where :func:`numpy.clip` called on a :class:`Series` with negative ``a_min`` values or with values in certain ranges did not correctly clip the underlying data (:issue:`25066`)
 - Fixed bug in :meth:`Series.skew` and :meth:`Series.kurt` (and their :class:`DataFrame` counterparts) returning ``0.0`` for degenerate distributions; these now return ``NaN`` (:issue:`62864`)
 - Fixed regression where calling ``np.maximum(series, ...)`` or other numpy ufuncs not dispatched via dunder methods could cause a segfault due to unsafe ``PyArray_DIMS`` access in :class:`NDArrayBacked` when backing a 0-dimensional array (:issue:`60611`)
 - Fixed regression where calling numpy ufuncs with a ``where`` keyword argument containing a pandas :class:`Series` (e.g. ``np.maximum(series, 0, where=series > 2)``) caused infinite recursion and a segfault (:issue:`60611`)
